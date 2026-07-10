@@ -1,0 +1,80 @@
+/* Основные стили и сброс */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #111111;
+    --bg-secondary: #1B1B1B;
+    --bg-card: #232323;
+    --border-color: #333333;
+    --text-primary: #F5F5F5;
+    --text-secondary: #A6A6A6;
+    --accent: #E53935;
+    --accent-hover: #FF4D4D;
+    --accent-active: #C62828;
+    --font-ui: 'Inter', sans-serif;
+    --font-heading: 'Space Grotesk', sans-serif;
+    --radius: 12px;
+    --radius-lg: 16px;
+}
+
+body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+button:focus {
+    outline: none;
+}
+
+input {
+    font-family: inherit;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    outline: none;
+}
+
+input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
