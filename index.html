@@ -707,260 +707,299 @@
             </div>
         </aside>
     </div>
+<script>
+    const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
+    
+    let client_Supabase;
+    let currentUser = null;
+    let currentChat = null;
+    let isLogin = true;
+    let realtimeSubscription = null;
 
-    <script>
-        // ============ КОНФИГУРАЦИЯ ============
-        const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
+    client_Supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Проверяем сохраненного пользователя
+    const savedUser = localStorage.getItem('touch_user');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        document.getElementById('authOverlay').style.display = 'none';
+        showProfile();
+        loadChats();
+    }
+
+    // ============ АВТОРИЗАЦИЯ ============
+    async function handleAuth() {
+        const email = document.getElementById('authEmail').value.trim();
+        const username = document.getElementById('authUsername').value.trim();
+        const errorDiv = document.getElementById('authError');
         
-        let client_Supabase;
-        let currentUser = null;
-        let currentChat = null;
-        let isLogin = true;
-
-        // ============ ИНИЦИАЛИЗАЦИЯ ============
-        client_Supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log('✅ Touch готов');
-
-        // Проверяем сохраненного пользователя
-        const savedUser = localStorage.getItem('touch_user');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            document.getElementById('authOverlay').style.display = 'none';
-            showProfile();
-            loadChats();
+        errorDiv.style.display = 'none';
+        
+        if (!email || !username) {
+            errorDiv.textContent = 'Заполните все поля';
+            errorDiv.style.display = 'block';
+            return;
         }
-
-        // ============ АВТОРИЗАЦИЯ ============
-        async function handleAuth() {
-            const email = document.getElementById('authEmail').value.trim();
-            const username = document.getElementById('authUsername').value.trim();
-            const errorDiv = document.getElementById('authError');
+        
+        if (isLogin) {
+            const { data, error } = await client_Supabase
+                .from('users')
+                .select('*')
+                .eq('email', email)
+                .eq('username', username)
+                .single();
             
-            errorDiv.style.display = 'none';
-            
-            if (!email || !username) {
-                errorDiv.textContent = 'Заполните все поля';
+            if (error || !data) {
+                errorDiv.textContent = 'Пользователь не найден';
                 errorDiv.style.display = 'block';
                 return;
             }
             
-            if (isLogin) {
-                // ВХОД
-                const { data, error } = await client_Supabase
-                    .from('users')
-                    .select('*')
-                    .eq('email', email)
-                    .eq('username', username)
-                    .single();
-                
-                if (error || !data) {
-                    errorDiv.textContent = 'Пользователь не найден. Проверьте email и имя.';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-                
-                currentUser = data;
-                localStorage.setItem('touch_user', JSON.stringify(data));
-                document.getElementById('authOverlay').style.display = 'none';
-                showProfile();
-                loadChats();
-                
-            } else {
-                // РЕГИСТРАЦИЯ
-                const { data: exists } = await client_Supabase
-                    .from('users')
-                    .select('id')
-                    .or(`email.eq.${email},username.eq.${username}`)
-                    .maybeSingle();
-                
-                if (exists) {
-                    errorDiv.textContent = 'Пользователь с таким email или именем уже существует';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-                
-                const { data: newUser, error } = await client_Supabase
-                    .from('users')
-                    .insert({
-                        email: email,
-                        username: username,
-                        display_name: username,
-                        status: 'online'
-                    })
-                    .select()
-                    .single();
-                
-                if (error) {
-                    errorDiv.textContent = 'Ошибка: ' + error.message;
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-                
-                currentUser = newUser;
-                localStorage.setItem('touch_user', JSON.stringify(newUser));
-                document.getElementById('authOverlay').style.display = 'none';
-                showProfile();
-                loadChats();
-            }
-        }
-
-        function showProfile() {
-            if (!currentUser) return;
-            document.getElementById('headerAvatar').textContent = currentUser.display_name?.[0]?.toUpperCase() || 'U';
-            document.getElementById('profileAvatar').textContent = currentUser.display_name?.[0]?.toUpperCase() || 'U';
-            document.getElementById('profileUsername').textContent = currentUser.display_name || currentUser.username;
-            document.getElementById('profileEmail').textContent = currentUser.email;
-            document.getElementById('profileTid').textContent = currentUser.tid || '@touch_user';
-            document.getElementById('profileDate').textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
-        }
-
-        // ============ ЧАТЫ ============
-        async function loadChats() {
-            if (!currentUser) return;
-            
-            const { data } = await client_Supabase
-                .from('chat_members')
-                .select('chat_id, chats(id, name)')
-                .eq('user_id', currentUser.id);
-            
-            const chatList = document.getElementById('chatList');
-            chatList.innerHTML = '';
-            
-            if (data && data.length > 0) {
-                data.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'chat-item';
-                    div.onclick = () => openChat(item.chats.id, item.chats.name);
-                    div.innerHTML = `
-                        <div class="avatar">${(item.chats.name || 'Ч')[0]}</div>
-                        <div class="chat-info">
-                            <div class="chat-name">${item.chats.name}</div>
-                            <div class="chat-message">Нажмите чтобы открыть</div>
-                        </div>
-                    `;
-                    chatList.appendChild(div);
-                });
-            } else {
-                chatList.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">Нет чатов</div>';
-            }
-        }
-
-        async function openChat(chatId, chatName) {
-            currentChat = chatId;
-            document.getElementById('chatName').textContent = chatName;
-            document.getElementById('chatAvatar').textContent = chatName[0];
-            
-            const { data: messages } = await client_Supabase
-                .from('messages')
-                .select('*')
-                .eq('chat_id', chatId)
-                .order('created_at', { ascending: true });
-            
-            const container = document.getElementById('messagesContainer');
-            container.innerHTML = '';
-            
-            if (messages && messages.length > 0) {
-                messages.forEach(msg => {
-                    const isOutgoing = msg.sender_id === currentUser.id;
-                    const div = document.createElement('div');
-                    div.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
-                    div.innerHTML = `
-                        <div class="message-content">
-                            <p>${msg.content}</p>
-                            <span class="message-time">${new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</span>
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-            } else {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);margin-top:40px;">Нет сообщений</div>';
-            }
-            
-            container.scrollTop = container.scrollHeight;
-        }
-
-        async function sendMessage() {
-            if (!currentChat) return;
-            const content = document.getElementById('messageInput').value.trim();
-            if (!content) return;
-            
-            await client_Supabase.from('messages').insert({
-                chat_id: currentChat,
-                sender_id: currentUser.id,
-                content: content
-            });
-            
-            document.getElementById('messageInput').value = '';
-            openChat(currentChat, document.getElementById('chatName').textContent);
-        }
-
-        async function createChat() {
-            const username = prompt('Введите имя пользователя для чата:');
-            if (!username || username === currentUser.username) return;
-            
-            const { data: user } = await client_Supabase
+            currentUser = data;
+        } else {
+            const { data: exists } = await client_Supabase
                 .from('users')
-                .select('*')
-                .eq('username', username)
-                .single();
+                .select('id')
+                .or(`email.eq.${email},username.eq.${username}`)
+                .maybeSingle();
             
-            if (!user) {
-                alert('Пользователь не найден');
+            if (exists) {
+                errorDiv.textContent = 'Пользователь уже существует';
+                errorDiv.style.display = 'block';
                 return;
             }
             
-            const chatName = `${currentUser.display_name} & ${user.display_name}`;
-            
-            const { data: chat } = await client_Supabase
-                .from('chats')
-                .insert({ name: chatName })
+            const { data: newUser, error } = await client_Supabase
+                .from('users')
+                .insert({
+                    email, username,
+                    display_name: username,
+                    status: 'online'
+                })
                 .select()
                 .single();
             
-            await client_Supabase.from('chat_members').insert([
-                { chat_id: chat.id, user_id: currentUser.id },
-                { chat_id: chat.id, user_id: user.id }
-            ]);
-            
-            loadChats();
-        }
-
-        function logout() {
-            if (currentUser) {
-                client_Supabase.from('users')
-                    .update({ status: 'offline', last_seen: new Date() })
-                    .eq('id', currentUser.id);
+            if (error) {
+                errorDiv.textContent = 'Ошибка: ' + error.message;
+                errorDiv.style.display = 'block';
+                return;
             }
             
-            localStorage.removeItem('touch_user');
-            currentUser = null;
-            currentChat = null;
-            document.getElementById('authOverlay').style.display = 'flex';
-            document.getElementById('profilePanel').style.display = 'none';
+            currentUser = newUser;
         }
+        
+        localStorage.setItem('touch_user', JSON.stringify(currentUser));
+        document.getElementById('authOverlay').style.display = 'none';
+        showProfile();
+        loadChats();
+    }
 
-        function copyTid() {
-            const tid = document.getElementById('profileTid').textContent;
-            navigator.clipboard.writeText(tid);
-            alert('TID скопирован!');
+    function showProfile() {
+        if (!currentUser) return;
+        document.getElementById('headerAvatar').textContent = currentUser.display_name?.[0]?.toUpperCase() || 'U';
+        document.getElementById('profileAvatar').textContent = currentUser.display_name?.[0]?.toUpperCase() || 'U';
+        document.getElementById('profileUsername').textContent = currentUser.display_name;
+        document.getElementById('profileEmail').textContent = currentUser.email;
+        document.getElementById('profileTid').textContent = currentUser.tid || '@touch_user';
+        document.getElementById('profileDate').textContent = currentUser.created_at ? 
+            new Date(currentUser.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
+    }
+
+    // ============ ЧАТЫ С АВТО-ОБНОВЛЕНИЕМ ============
+    async function loadChats() {
+        if (!currentUser) return;
+        
+        const { data } = await client_Supabase
+            .from('chat_members')
+            .select('chat_id, chats(id, name)')
+            .eq('user_id', currentUser.id);
+        
+        const chatList = document.getElementById('chatList');
+        chatList.innerHTML = '';
+        
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'chat-item';
+                if (currentChat === item.chats.id) div.classList.add('active');
+                div.onclick = () => openChat(item.chats.id, item.chats.name);
+                div.innerHTML = `
+                    <div class="avatar">${(item.chats.name || 'Ч')[0]}</div>
+                    <div class="chat-info">
+                        <div class="chat-name">${item.chats.name}</div>
+                        <div class="chat-message">Нажмите чтобы открыть</div>
+                    </div>
+                `;
+                chatList.appendChild(div);
+            });
+        } else {
+            chatList.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">Нет чатов</div>';
         }
+    }
 
-        // ============ ОБРАБОТЧИКИ СОБЫТИЙ ============
-        document.getElementById('authSubmit').addEventListener('click', handleAuth);
+    async function openChat(chatId, chatName) {
+        // Отписываемся от старого чата
+        if (realtimeSubscription) {
+            client_Supabase.removeChannel(realtimeSubscription);
+        }
         
-        document.getElementById('authToggle').addEventListener('click', function() {
-            isLogin = !isLogin;
-            document.getElementById('authTitle').textContent = isLogin ? 'Вход в Touch' : 'Регистрация';
-            document.getElementById('authSubmit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
-            document.getElementById('authToggle').textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
-            document.getElementById('authError').style.display = 'none';
-        });
+        currentChat = chatId;
+        document.getElementById('chatName').textContent = chatName;
+        document.getElementById('chatAvatar').textContent = chatName[0];
         
-        document.querySelector('.profile-btn').addEventListener('click', function() {
-            const panel = document.getElementById('profilePanel');
-            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+        await loadMessages();
+        
+        // Подписываемся на новые сообщения (РЕАЛЬНОЕ ВРЕМЯ!)
+        realtimeSubscription = client_Supabase
+            .channel(`chat:${chatId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `chat_id=eq.${chatId}`
+            }, (payload) => {
+                addMessageToUI(payload.new);
+            })
+            .subscribe();
+        
+        // Обновляем список чатов
+        loadChats();
+    }
+
+    async function loadMessages() {
+        if (!currentChat) return;
+        
+        const { data: messages } = await client_Supabase
+            .from('messages')
+            .select('*')
+            .eq('chat_id', currentChat)
+            .order('created_at', { ascending: true });
+        
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '';
+        
+        if (messages && messages.length > 0) {
+            messages.forEach(msg => addMessageToUI(msg));
+        } else {
+            container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);margin-top:40px;">Нет сообщений</div>';
+        }
+        
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function addMessageToUI(msg) {
+        const container = document.getElementById('messagesContainer');
+        
+        // Убираем заглушку "Нет сообщений"
+        if (container.querySelector('div[style]')) {
+            container.innerHTML = '';
+        }
+        
+        const isOutgoing = msg.sender_id === currentUser.id;
+        const div = document.createElement('div');
+        div.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
+        div.innerHTML = `
+            <div class="message-content">
+                <p>${msg.content}</p>
+                <span class="message-time">${new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</span>
+            </div>
+        `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+        if (!currentChat) return;
+        const content = document.getElementById('messageInput').value.trim();
+        if (!content) return;
+        
+        document.getElementById('messageInput').value = '';
+        
+        await client_Supabase.from('messages').insert({
+            chat_id: currentChat,
+            sender_id: currentUser.id,
+            content: content
         });
-    </script>
+        // Сообщение появится автомагически через realtime!
+    }
+
+    async function createChat() {
+        const username = prompt('Введите имя пользователя:');
+        if (!username || username === currentUser.username) return;
+        
+        const { data: user } = await client_Supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .single();
+        
+        if (!user) {
+            alert('Пользователь не найден');
+            return;
+        }
+        
+        const chatName = `${currentUser.display_name} & ${user.display_name}`;
+        
+        const { data: chat, error } = await client_Supabase
+            .from('chats')
+            .insert({ name: chatName })
+            .select()
+            .single();
+        
+        if (error) {
+            alert('Ошибка создания чата');
+            return;
+        }
+        
+        await client_Supabase.from('chat_members').insert([
+            { chat_id: chat.id, user_id: currentUser.id },
+            { chat_id: chat.id, user_id: user.id }
+        ]);
+        
+        loadChats();
+        openChat(chat.id, chatName);
+    }
+
+    function logout() {
+        if (realtimeSubscription) {
+            client_Supabase.removeChannel(realtimeSubscription);
+        }
+        
+        if (currentUser) {
+            client_Supabase.from('users')
+                .update({ status: 'offline', last_seen: new Date() })
+                .eq('id', currentUser.id);
+        }
+        
+        localStorage.removeItem('touch_user');
+        currentUser = null;
+        currentChat = null;
+        document.getElementById('authOverlay').style.display = 'flex';
+        document.getElementById('profilePanel').style.display = 'none';
+    }
+
+    function copyTid() {
+        const tid = document.getElementById('profileTid').textContent;
+        navigator.clipboard.writeText(tid);
+        alert('TID скопирован!');
+    }
+
+    // Обработчики
+    document.getElementById('authSubmit').addEventListener('click', handleAuth);
+    
+    document.getElementById('authToggle').addEventListener('click', function() {
+        isLogin = !isLogin;
+        document.getElementById('authTitle').textContent = isLogin ? 'Вход в Touch' : 'Регистрация';
+        document.getElementById('authSubmit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
+        document.getElementById('authToggle').textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
+        document.getElementById('authError').style.display = 'none';
+    });
+    
+    document.querySelector('.profile-btn').addEventListener('click', function() {
+        const panel = document.getElementById('profilePanel');
+        panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+    });
+</script>
 </body>
 </html>
