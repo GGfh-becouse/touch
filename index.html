@@ -426,191 +426,302 @@
         </main>
     </div>
 
-    <script>
-        const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
-        
-        let client_Supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let currentUser = null;
-        let currentChat = null;
-        let isLogin = true;
-        let realtimeSubscription = null;
+<script>
+    const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
+    
+    let client_Supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let currentUser = null;
+    let currentChat = null;
+    let isLogin = true;
+    let realtimeSubscription = null;
 
-        // Проверка сохраненного пользователя
-        const savedUser = localStorage.getItem('touch_user');
-        if (savedUser) {
+    console.log('🚀 Touch запущен');
+
+    // Проверка сохраненного пользователя
+    const savedUser = localStorage.getItem('touch_user');
+    if (savedUser) {
+        try {
             currentUser = JSON.parse(savedUser);
+            console.log('✅ Найден сохраненный пользователь:', currentUser.username);
             document.getElementById('authOverlay').style.display = 'none';
             updateProfileUI();
             loadChats();
-        } else {
+        } catch(e) {
+            console.error('Ошибка загрузки пользователя:', e);
+            localStorage.removeItem('touch_user');
             document.getElementById('authOverlay').style.display = 'flex';
         }
+    } else {
+        console.log('Нет сохраненного пользователя');
+        document.getElementById('authOverlay').style.display = 'flex';
+    }
 
-        // ОТКРЫТЬ/ЗАКРЫТЬ ПРОФИЛЬ
-        function openProfile() {
-            updateProfileUI();
-            document.getElementById('profileOverlay').classList.add('show');
-        }
-        function closeProfile() {
-            document.getElementById('profileOverlay').classList.remove('show');
-        }
+    function openProfile() {
+        updateProfileUI();
+        document.getElementById('profileOverlay').classList.add('show');
+    }
+    
+    function closeProfile() {
+        document.getElementById('profileOverlay').classList.remove('show');
+    }
 
-        function updateProfileUI() {
-            if (!currentUser) return;
-            document.getElementById('headerAvatar').textContent = currentUser.display_name?.[0]?.toUpperCase() || '?';
-            document.getElementById('profileAvatar').textContent = currentUser.display_name?.[0]?.toUpperCase() || 'U';
-            document.getElementById('profileUsername').textContent = currentUser.display_name || 'Пользователь';
-            document.getElementById('profileEmail').textContent = currentUser.email || '-';
-            document.getElementById('profileTid').textContent = currentUser.tid || '@touch_user';
-            document.getElementById('profileDate').textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
-        }
+    function updateProfileUI() {
+        if (!currentUser) return;
+        document.getElementById('headerAvatar').textContent = (currentUser.display_name || '?')[0].toUpperCase();
+        document.getElementById('profileAvatar').textContent = (currentUser.display_name || 'U')[0].toUpperCase();
+        document.getElementById('profileUsername').textContent = currentUser.display_name || 'Пользователь';
+        document.getElementById('profileEmail').textContent = currentUser.email || '-';
+        document.getElementById('profileTid').textContent = currentUser.tid || '@touch_user';
+        document.getElementById('profileDate').textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
+    }
 
-        // ВХОД / РЕГИСТРАЦИЯ
-        async function handleAuth() {
-            const email = document.getElementById('authEmail').value.trim();
-            const username = document.getElementById('authUsername').value.trim();
-            const errorDiv = document.getElementById('authError');
-            errorDiv.style.display = 'none';
-            
-            if (!email || !username) {
-                errorDiv.textContent = 'Заполните все поля';
-                errorDiv.style.display = 'block';
-                return;
-            }
-            
+    // ВХОД / РЕГИСТРАЦИЯ
+    window.handleAuth = async function() {
+        const email = document.getElementById('authEmail').value.trim();
+        const username = document.getElementById('authUsername').value.trim();
+        const errorDiv = document.getElementById('authError');
+        
+        console.log('🔑 Попытка входа:', { email, username, isLogin });
+        
+        errorDiv.style.display = 'none';
+        
+        if (!email || !username) {
+            errorDiv.textContent = 'Заполните все поля';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        try {
             if (isLogin) {
-                const { data, error } = await client_Supabase.from('users').select('*').eq('email', email).eq('username', username).single();
-                if (error || !data) { errorDiv.textContent = 'Пользователь не найден'; errorDiv.style.display = 'block'; return; }
+                console.log('Ищем пользователя...');
+                const { data, error } = await client_Supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('username', username)
+                    .single();
+                
+                console.log('Результат поиска:', { data, error });
+                
+                if (error || !data) {
+                    errorDiv.textContent = 'Пользователь не найден. Проверьте email и имя.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
                 currentUser = data;
+                console.log('✅ Вход выполнен:', currentUser.username);
             } else {
-                const { data: exists } = await client_Supabase.from('users').select('id').or(`email.eq.${email},username.eq.${username}`).maybeSingle();
-                if (exists) { errorDiv.textContent = 'Пользователь уже существует'; errorDiv.style.display = 'block'; return; }
-                const { data: newUser, error } = await client_Supabase.from('users').insert({ email, username, display_name: username, status: 'online' }).select().single();
-                if (error) { errorDiv.textContent = 'Ошибка: ' + error.message; errorDiv.style.display = 'block'; return; }
+                console.log('Проверяем существование...');
+                const { data: exists } = await client_Supabase
+                    .from('users')
+                    .select('id')
+                    .or(`email.eq.${email},username.eq.${username}`)
+                    .maybeSingle();
+                
+                if (exists) {
+                    errorDiv.textContent = 'Пользователь уже существует';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                console.log('Создаем пользователя...');
+                const { data: newUser, error } = await client_Supabase
+                    .from('users')
+                    .insert({
+                        email: email,
+                        username: username,
+                        display_name: username,
+                        status: 'online'
+                    })
+                    .select()
+                    .single();
+                
+                console.log('Результат создания:', { newUser, error });
+                
+                if (error) {
+                    errorDiv.textContent = 'Ошибка: ' + error.message;
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
                 currentUser = newUser;
+                console.log('✅ Регистрация выполнена:', currentUser.username);
             }
             
             localStorage.setItem('touch_user', JSON.stringify(currentUser));
             document.getElementById('authOverlay').style.display = 'none';
             updateProfileUI();
             loadChats();
+            
+        } catch(err) {
+            console.error('❌ Критическая ошибка:', err);
+            errorDiv.textContent = 'Ошибка: ' + err.message;
+            errorDiv.style.display = 'block';
         }
+    };
 
-        // ЧАТЫ
-        async function loadChats() {
-            if (!currentUser) return;
-            const { data } = await client_Supabase.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', currentUser.id);
-            const chatList = document.getElementById('chatList');
-            chatList.innerHTML = '';
-            if (data && data.length > 0) {
-                data.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'chat-item';
-                    if (currentChat === item.chats.id) div.classList.add('active');
-                    div.onclick = () => openChat(item.chats.id, item.chats.name);
-                    div.innerHTML = `<div class="avatar">${(item.chats.name||'Ч')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-message">Открыть чат</div></div>`;
-                    chatList.appendChild(div);
-                });
-            } else {
-                chatList.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">Нет чатов</div>';
-            }
+    // ЧАТЫ
+    async function loadChats() {
+        if (!currentUser) return;
+        console.log('Загружаем чаты...');
+        const { data, error } = await client_Supabase
+            .from('chat_members')
+            .select('chat_id, chats(id, name)')
+            .eq('user_id', currentUser.id);
+        
+        console.log('Чаты:', { data, error });
+        
+        const chatList = document.getElementById('chatList');
+        chatList.innerHTML = '';
+        
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'chat-item';
+                if (currentChat === item.chats.id) div.classList.add('active');
+                div.onclick = () => openChat(item.chats.id, item.chats.name);
+                div.innerHTML = `<div class="avatar">${(item.chats.name||'Ч')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-message">Открыть чат</div></div>`;
+                chatList.appendChild(div);
+            });
+        } else {
+            chatList.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">Нет чатов</div>';
         }
+    }
 
-        async function openChat(chatId, chatName) {
-            if (realtimeSubscription) client_Supabase.removeChannel(realtimeSubscription);
-            currentChat = chatId;
-            document.getElementById('chatName').textContent = chatName;
-            document.getElementById('chatAvatar').textContent = chatName[0];
-            await loadMessages();
-            realtimeSubscription = client_Supabase.channel(`chat:${chatId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => { addMessageToUI(payload.new); }).subscribe();
-            loadChats();
+    async function openChat(chatId, chatName) {
+        if (realtimeSubscription) client_Supabase.removeChannel(realtimeSubscription);
+        currentChat = chatId;
+        document.getElementById('chatName').textContent = chatName;
+        document.getElementById('chatAvatar').textContent = chatName[0];
+        await loadMessages();
+        realtimeSubscription = client_Supabase
+            .channel(`chat:${chatId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `chat_id=eq.${chatId}`
+            }, (payload) => {
+                addMessageToUI(payload.new);
+            })
+            .subscribe();
+        loadChats();
+    }
+
+    async function loadMessages() {
+        if (!currentChat) return;
+        const { data: messages } = await client_Supabase
+            .from('messages')
+            .select('*')
+            .eq('chat_id', currentChat)
+            .order('created_at', { ascending: true });
+        
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '';
+        
+        if (messages && messages.length > 0) {
+            messages.forEach(msg => addMessageToUI(msg));
+        } else {
+            container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);margin-top:40px;">Нет сообщений</div>';
         }
+        container.scrollTop = container.scrollHeight;
+    }
 
-        async function loadMessages() {
-            if (!currentChat) return;
-            const { data: messages } = await client_Supabase.from('messages').select('*').eq('chat_id', currentChat).order('created_at', { ascending: true });
-            const container = document.getElementById('messagesContainer');
-            container.innerHTML = '';
-            if (messages && messages.length > 0) {
-                messages.forEach(msg => addMessageToUI(msg));
-            } else {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);margin-top:40px;">Нет сообщений</div>';
-            }
-            container.scrollTop = container.scrollHeight;
-        }
+    function addMessageToUI(msg) {
+        const container = document.getElementById('messagesContainer');
+        const isOutgoing = msg.sender_id === currentUser.id;
+        const div = document.createElement('div');
+        div.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
+        div.innerHTML = `<div class="message-content"><p>${msg.content}</p><span class="message-time">${new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
 
-        function addMessageToUI(msg) {
-            const container = document.getElementById('messagesContainer');
-            if (container.children.length === 1 && container.children[0].style && container.children[0].style.textAlign) container.innerHTML = '';
-            const isOutgoing = msg.sender_id === currentUser.id;
-            const div = document.createElement('div');
-            div.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
-            div.innerHTML = `<div class="message-content"><p>${msg.content}</p><span class="message-time">${new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        async function sendMessage() {
-            if (!currentChat) return;
-            const content = document.getElementById('messageInput').value.trim();
-            if (!content) return;
-            document.getElementById('messageInput').value = '';
-            await client_Supabase.from('messages').insert({ chat_id: currentChat, sender_id: currentUser.id, content: content });
-        }
-
-        async function createChat() {
-            const username = prompt('Введите имя пользователя для чата:');
-            if (!username || username === currentUser.username) return;
-            const { data: user } = await client_Supabase.from('users').select('*').eq('username', username).single();
-            if (!user) { alert('Пользователь не найден'); return; }
-            const chatName = `${currentUser.display_name} & ${user.display_name}`;
-            const { data: chat } = await client_Supabase.from('chats').insert({ name: chatName }).select().single();
-            await client_Supabase.from('chat_members').insert([{ chat_id: chat.id, user_id: currentUser.id }, { chat_id: chat.id, user_id: user.id }]);
-            loadChats();
-            openChat(chat.id, chatName);
-        }
-
-        async function renameChat() {
-            if (!currentChat) { alert('Выберите чат'); return; }
-            const newName = prompt('Новое название чата:', document.getElementById('chatName').textContent);
-            if (!newName) return;
-            await client_Supabase.from('chats').update({ name: newName }).eq('id', currentChat);
-            document.getElementById('chatName').textContent = newName;
-            document.getElementById('chatAvatar').textContent = newName[0];
-            loadChats();
-        }
-
-        function logout() {
-            if (realtimeSubscription) { client_Supabase.removeChannel(realtimeSubscription); realtimeSubscription = null; }
-            if (currentUser) client_Supabase.from('users').update({ status: 'offline', last_seen: new Date() }).eq('id', currentUser.id);
-            localStorage.removeItem('touch_user');
-            currentUser = null; currentChat = null;
-            closeProfile();
-            document.getElementById('authOverlay').style.display = 'flex';
-            document.getElementById('chatList').innerHTML = '';
-            document.getElementById('messagesContainer').innerHTML = '<div style="text-align:center;color:var(--text-secondary);margin-top:40px;">Выберите чат</div>';
-            document.getElementById('chatName').textContent = 'Выберите чат';
-            document.getElementById('chatAvatar').textContent = '?';
-        }
-
-        function copyTid() {
-            navigator.clipboard.writeText(document.getElementById('profileTid').textContent).then(() => alert('TID скопирован!'));
-        }
-
-        document.getElementById('authSubmit').addEventListener('click', handleAuth);
-        document.getElementById('authToggle').addEventListener('click', () => {
-            isLogin = !isLogin;
-            document.getElementById('authTitle').textContent = isLogin ? 'Вход в Touch' : 'Регистрация';
-            document.getElementById('authSubmit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
-            document.getElementById('authToggle').textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
+    window.sendMessage = async function() {
+        if (!currentChat) return;
+        const content = document.getElementById('messageInput').value.trim();
+        if (!content) return;
+        document.getElementById('messageInput').value = '';
+        await client_Supabase.from('messages').insert({
+            chat_id: currentChat,
+            sender_id: currentUser.id,
+            content: content
         });
+    };
 
-        // Закрытие профиля по клику на фон
-        document.getElementById('profileOverlay').addEventListener('click', function(e) {
-            if (e.target === this) closeProfile();
-        });
-    </script>
+    window.createChat = async function() {
+        const username = prompt('Введите имя пользователя:');
+        if (!username || username === currentUser.username) return;
+        
+        const { data: user } = await client_Supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .single();
+        
+        if (!user) { alert('Пользователь не найден'); return; }
+        
+        const chatName = `${currentUser.display_name} & ${user.display_name}`;
+        const { data: chat } = await client_Supabase
+            .from('chats')
+            .insert({ name: chatName })
+            .select()
+            .single();
+        
+        await client_Supabase.from('chat_members').insert([
+            { chat_id: chat.id, user_id: currentUser.id },
+            { chat_id: chat.id, user_id: user.id }
+        ]);
+        
+        loadChats();
+        openChat(chat.id, chatName);
+    };
+
+    window.renameChat = async function() {
+        if (!currentChat) { alert('Выберите чат'); return; }
+        const newName = prompt('Новое название:', document.getElementById('chatName').textContent);
+        if (!newName) return;
+        await client_Supabase.from('chats').update({ name: newName }).eq('id', currentChat);
+        document.getElementById('chatName').textContent = newName;
+        document.getElementById('chatAvatar').textContent = newName[0];
+        loadChats();
+    };
+
+    window.logout = function() {
+        if (realtimeSubscription) { client_Supabase.removeChannel(realtimeSubscription); realtimeSubscription = null; }
+        if (currentUser) client_Supabase.from('users').update({ status: 'offline', last_seen: new Date() }).eq('id', currentUser.id);
+        localStorage.removeItem('touch_user');
+        currentUser = null;
+        currentChat = null;
+        closeProfile();
+        document.getElementById('authOverlay').style.display = 'flex';
+        document.getElementById('chatList').innerHTML = '';
+        document.getElementById('messagesContainer').innerHTML = '<div style="text-align:center;color:var(--text-secondary);margin-top:40px;">Выберите чат</div>';
+    };
+
+    window.copyTid = function() {
+        navigator.clipboard.writeText(document.getElementById('profileTid').textContent);
+        alert('TID скопирован!');
+    };
+
+    // Обработчики событий
+    document.getElementById('authSubmit').addEventListener('click', handleAuth);
+    
+    document.getElementById('authToggle').addEventListener('click', function() {
+        isLogin = !isLogin;
+        document.getElementById('authTitle').textContent = isLogin ? 'Вход в Touch' : 'Регистрация';
+        document.getElementById('authSubmit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
+        document.getElementById('authToggle').textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
+    });
+
+    document.getElementById('profileOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeProfile();
+    });
+
+    console.log('✅ Все обработчики установлены');
+</script>
 </body>
 </html>
 
