@@ -647,16 +647,26 @@
         </aside>
 
         <main class="chat-main">
-            <div class="chat-header">
-                <div class="chat-header-info">
-                    <div class="avatar-large" id="chatAvatar">?</div>
-                    <div>
-                        <h2 class="chat-header-name" id="chatName">Выберите чат</h2>
-                        <div class="chat-header-status">
-                            <span class="status-indicator"></span>
-                            <span class="status-text">Не в сети</span>
-                        </div>
-                    </div>
+<div class="chat-header">
+    <div class="chat-header-info">
+        <div class="avatar-large" id="chatAvatar">?</div>
+        <div>
+            <h2 class="chat-header-name" id="chatName" style="cursor: pointer;" onclick="renameChat()" title="Нажмите чтобы переименовать">Выберите чат</h2>
+            <div class="chat-header-status">
+                <span class="status-indicator"></span>
+                <span class="status-text">Не в сети</span>
+            </div>
+        </div>
+    </div>
+    <div class="chat-header-actions">
+        <button class="header-btn" onclick="renameChat()" title="Переименовать чат">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M8 3H3C2.44772 3 2 3.44772 2 4V15C2 15.5523 2.44772 16 3 16H14C14.5523 16 15 15.5523 15 15V10"/>
+                <path d="M14.5 1.5C15.3284 0.671573 16.6716 0.671573 17.5 1.5C18.3284 2.32843 18.3284 3.67157 17.5 4.5L9 13L5.5 14L6.5 10.5L14.5 1.5Z"/>
+            </svg>
+        </button>
+    </div>
+</div>
                 </div>
             </div>
 
@@ -806,7 +816,7 @@
             new Date(currentUser.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
     }
 
-    // ============ ЧАТЫ С АВТО-ОБНОВЛЕНИЕМ ============
+    // ============ ЧАТЫ ============
     async function loadChats() {
         if (!currentUser) return;
         
@@ -839,7 +849,6 @@
     }
 
     async function openChat(chatId, chatName) {
-        // Отписываемся от старого чата
         if (realtimeSubscription) {
             client_Supabase.removeChannel(realtimeSubscription);
         }
@@ -850,7 +859,6 @@
         
         await loadMessages();
         
-        // Подписываемся на новые сообщения (РЕАЛЬНОЕ ВРЕМЯ!)
         realtimeSubscription = client_Supabase
             .channel(`chat:${chatId}`)
             .on('postgres_changes', {
@@ -863,7 +871,6 @@
             })
             .subscribe();
         
-        // Обновляем список чатов
         loadChats();
     }
 
@@ -891,7 +898,6 @@
     function addMessageToUI(msg) {
         const container = document.getElementById('messagesContainer');
         
-        // Убираем заглушку "Нет сообщений"
         if (container.querySelector('div[style]')) {
             container.innerHTML = '';
         }
@@ -921,7 +927,6 @@
             sender_id: currentUser.id,
             content: content
         });
-        // Сообщение появится автомагически через realtime!
     }
 
     async function createChat() {
@@ -959,6 +964,36 @@
         
         loadChats();
         openChat(chat.id, chatName);
+    }
+
+    // ============ НОВАЯ ФУНКЦИЯ: ПЕРЕИМЕНОВАНИЕ ЧАТА ============
+    async function renameChat() {
+        if (!currentChat) {
+            alert('Сначала выберите чат');
+            return;
+        }
+        
+        const currentName = document.getElementById('chatName').textContent;
+        const newName = prompt('Введите новое название чата:', currentName);
+        
+        if (!newName || newName === currentName) return;
+        
+        const { error } = await client_Supabase
+            .from('chats')
+            .update({ name: newName })
+            .eq('id', currentChat);
+        
+        if (error) {
+            alert('Ошибка переименования: ' + error.message);
+            return;
+        }
+        
+        // Обновляем название в интерфейсе
+        document.getElementById('chatName').textContent = newName;
+        document.getElementById('chatAvatar').textContent = newName[0];
+        
+        // Обновляем список чатов
+        loadChats();
     }
 
     function logout() {
