@@ -312,68 +312,69 @@
             }
         }
 
-        async function openChat(chatId, chatName) {
-            if (realtimeChannel) db.removeChannel(realtimeChannel);
-            
-            activeChatId = chatId;
-            document.getElementById('chatTitle').textContent = chatName;
-            document.getElementById('chatAva').textContent = chatName[0];
-            
-            const { data: messages } = await db.from('messages')
-                .select('*')
-                .eq('chat_id', chatId)
-                .order('created_at', { ascending: true });
-            
-            const container = document.getElementById('msgs');
-            container.innerHTML = '';
-            
-            if (messages && messages.length > 0) {
-                messages.forEach(msg => addMessageToChat(msg));
-            } else {
-                container.innerHTML = '<div style="text-align:center;color:var(--text2);margin-top:40px">Нет сообщений</div>';
-            }
-            container.scrollTop = container.scrollHeight;
-            
-            realtimeChannel = db.channel('chat:' + chatId)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: 'chat_id=eq.' + chatId
-                }, (payload) => {
-                    addMessageToChat(payload.new);
-                })
-                .subscribe();
-            
-            loadChatList();
-        }
+       let pollingInterval = null;
 
-        function addMessageToChat(msg) {
-            const container = document.getElementById('msgs');
-            
-            if (container.children.length === 1 && container.children[0].style.textAlign === 'center') {
-                container.innerHTML = '';
-            }
-            
-            const isOutgoing = msg.sender_id === currentUser.id;
-            const div = document.createElement('div');
-            div.className = 'msg ' + (isOutgoing ? 'out' : 'in');
-            
-            const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            div.innerHTML = `
-                <div class="msg-body">
-                    <p>${msg.content}</p>
-                    <div class="msg-time">${time}</div>
-                </div>
-            `;
-            
-            container.appendChild(div);
+async function openChat(chatId, chatName) {
+    // Останавливаем старые подписки
+    if (realtimeChannel) db.removeChannel(realtimeChannel);
+    if (pollingInterval) clearInterval(pollingInterval);
+    
+    activeChatId = chatId;
+    document.getElementById('chatTitle').textContent = chatName;
+    document.getElementById('chatAva').textContent = chatName[0];
+    
+    // Первая загрузка сообщений
+    await loadMessagesForChat(chatId);
+    
+    // Способ 1: Realtime через WebSocket (мгновенно)
+    realtimeChannel = db.channel('chat:' + chatId)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: 'chat_id=eq.' + chatId
+        }, (payload) => {
+            addMessageToChat(payload.new);
+        })
+        .subscribe();
+    
+    // Способ 2: Polling каждую 1 секунду (резервный)
+    pollingInterval = setInterval(async () => {
+        await loadMessagesForChat(chatId, true);
+    }, 1000);
+    
+    loadChatList();
+}
+
+// Новая функция загрузки сообщений
+async function loadMessagesForChat(chatId, silent = false) {
+    const { data: messages } = await db.from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+    
+    const container = document.getElementById('msgs');
+    
+    if (!silent) {
+        // Полная перезагрузка
+        container.innerHTML = '';
+        if (messages && messages.length > 0) {
+            messages.forEach(msg => addMessageToChat(msg));
+        } else {
+            container.innerHTML = '<div style="text-align:center;color:var(--text2);margin-top:40px">Нет сообщений</div>';
+        }
+        container.scrollTop = container.scrollHeight;
+    } else {
+        // Только проверка новых сообщений
+        const currentCount = container.querySelectorAll('.msg').length;
+        if (messages && messages.length > currentCount) {
+            // Есть новые сообщения - перезагружаем
+            container.innerHTML = '';
+            messages.forEach(msg => addMessageToChat(msg));
             container.scrollTop = container.scrollHeight;
         }
+    }
+}
 
         async function sendMessage() {
             if (!activeChatId) return;
@@ -446,18 +447,16 @@
             navigator.clipboard.writeText(tid).then(() => alert('TID скопирован!'));
         }
 
-        function doLogout() {
-            if (realtimeChannel) {
-                db.removeChannel(realtimeChannel);
-                realtimeChannel = null;
-            }
-            
-            if (currentUser) {
-                db.from('users').update({
-                    status: 'offline',
-                    last_seen: new Date()
-                }).eq('id', currentUser.id);
-            }
+function doLogout() {
+    // Останавливаем все подписки
+    if (realtimeChannel) {
+        db.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+    }
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
             
             localStorage.removeItem('touchUser');
             currentUser = null;
