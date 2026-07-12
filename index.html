@@ -108,11 +108,6 @@
             .chats-screen{width:340px;border-right:1px solid var(--border)}
             .chat-screen{display:flex!important}
         }
-    .msg.out .msg-bubble p {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
 
         /* МОБИЛКА */
         @media (max-width: 768px) {
@@ -125,6 +120,18 @@
             .chat-screen.active{transform:translateX(0)}
             .chats-screen.hidden{transform:translateX(-30%);opacity:.5;pointer-events:none}
         }
+        .unread-badge {
+    background: var(--red);
+    color: #fff;
+    border-radius: 12px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 20px;
+    text-align: center;
+    line-height: 1.4;
+}
     </style>
 </head>
 <body>
@@ -210,6 +217,7 @@ let user = null;
 let chatId = null;
 let isLogin = true;
 let pollTimer = null;
+let lastMsgCount = 0;
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 const saved = localStorage.getItem('touchUser');
@@ -276,52 +284,84 @@ document.getElementById('authToggleBtn').addEventListener('click', function() {
     this.textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
 });
 
-// ============ ЧАТЫ СО СЧЕТЧИКАМИ НЕПРОЧИТАННЫХ ============
+// ============ ЧАТЫ ============
 async function loadChats() {
     if (!user) return;
     const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
     const list = document.getElementById('chatsList');
-    list.innerHTML = '';
+    
+    // Сохраняем текущий скролл
+    const scrollTop = list.scrollTop;
     
     if (data && data.length) {
+        // Обновляем только содержимое, не трогая DOM без нужды
+        let html = '';
         for (const item of data) {
-            // Получаем количество непрочитанных
-            const { data: unreadCount } = await db.rpc('get_unread_count', {
-                chat_id: item.chats.id,
-                user_id: user.id
-            });
-            
-            const unread = unreadCount || 0;
-            
-            const d = document.createElement('div');
-            d.className = 'chat-item';
-            if (chatId === item.chats.id) d.classList.add('active');
-            d.onclick = () => openChat(item.chats.id, item.chats.name);
-            d.innerHTML = `
-                <div class="ava">${(item.chats.name || '?')[0]}</div>
-                <div class="chat-info">
-                    <div class="chat-name">${item.chats.name}</div>
-                    <div class="chat-last">${unread > 0 ? unread + ' непрочитанных' : 'Открыть чат'}</div>
+            const isActive = chatId === item.chats.id;
+            html += `
+                <div class="chat-item${isActive ? ' active' : ''}" onclick="openChat('${item.chats.id}', '${item.chats.name.replace(/'/g, "\\'")}')">
+                    <div class="ava">${(item.chats.name || '?')[0]}</div>
+                    <div class="chat-info">
+                        <div class="chat-name">${item.chats.name}</div>
+                        <div class="chat-last" id="last-${item.chats.id}">Загрузка...</div>
+                    </div>
+                    <div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div>
                 </div>
-                ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
             `;
-            list.appendChild(d);
+        }
+        list.innerHTML = html;
+        list.scrollTop = scrollTop;
+        
+        // Загружаем счетчики асинхронно
+        for (const item of data) {
+            updateUnreadBadge(item.chats.id);
         }
     } else {
         list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
     }
 }
 
+async function updateUnreadBadge(chatId) {
+    if (!user) return;
+    try {
+        const { data } = await db.rpc('get_unread_count', { chat_id: chatId, user_id: user.id });
+        const count = data || 0;
+        const badge = document.getElementById('badge-' + chatId);
+        const lastMsg = document.getElementById('last-' + chatId);
+        
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        if (lastMsg) {
+            lastMsg.textContent = count > 0 ? count + ' новых' : 'Нет новых';
+        }
+    } catch(e) {}
+}
+
 // ============ ОТКРЫТИЕ ЧАТА ============
 async function openChat(id, name) {
     if (pollTimer) clearInterval(pollTimer);
     chatId = id;
+    lastMsgCount = 0;
+    
     document.getElementById('chatTitle').textContent = name;
     document.getElementById('chatAva').textContent = name[0];
-    await refreshMessages(false);
-    await markAllAsRead(id); // Отмечаем все как прочитанные
-    pollTimer = setInterval(() => refreshMessages(true), 1000);
-    loadChats(); // Обновляем счетчики
+    
+    await loadMessages();
+    markAsRead(id);
+    
+    // Обновляем счетчик этого чата
+    updateUnreadBadge(id);
+    loadChats();
+    
+    // Запускаем проверку новых сообщений
+    pollTimer = setInterval(checkNewMessages, 1000);
+    
     if (window.innerWidth <= 768) {
         document.getElementById('chatScreen').classList.add('active');
         document.getElementById('chatsScreen').classList.add('hidden');
@@ -329,8 +369,78 @@ async function openChat(id, name) {
     }
 }
 
-// ============ ОТМЕТКА ВСЕХ СООБЩЕНИЙ КАК ПРОЧИТАННЫХ ============
-async function markAllAsRead(chatId) {
+// ============ ЗАГРУЗКА СООБЩЕНИЙ (только при открытии) ============
+async function loadMessages() {
+    if (!chatId) return;
+    
+    const { data: msgs } = await db.from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+    
+    const container = document.getElementById('messages');
+    container.innerHTML = '';
+    
+    if (msgs && msgs.length) {
+        lastMsgCount = msgs.length;
+        for (const m of msgs) {
+            appendMessage(m, container);
+        }
+    } else {
+        container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
+    }
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+// ============ ПРОВЕРКА НОВЫХ СООБЩЕНИЙ (без перезагрузки) ============
+async function checkNewMessages() {
+    if (!chatId) return;
+    
+    const { data: msgs } = await db.from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+    
+    if (!msgs || msgs.length <= lastMsgCount) return;
+    
+    const container = document.getElementById('messages');
+    
+    // Убираем заглушку
+    const placeholder = container.querySelector('.messages-center');
+    if (placeholder) placeholder.remove();
+    
+    // Добавляем только новые сообщения
+    for (let i = lastMsgCount; i < msgs.length; i++) {
+        appendMessage(msgs[i], container);
+    }
+    
+    lastMsgCount = msgs.length;
+    container.scrollTop = container.scrollHeight;
+    
+    // Отмечаем как прочитанные
+    markAsRead(chatId);
+    updateUnreadBadge(chatId);
+}
+
+// ============ ДОБАВЛЕНИЕ ОДНОГО СООБЩЕНИЯ ============
+function appendMessage(m, container) {
+    const isOutgoing = m.sender_id === user.id;
+    const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isOutgoing ? 'out' : 'in');
+    div.innerHTML = `
+        <div class="msg-bubble">
+            <p>${m.content}</p>
+            <div class="time">${time}</div>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+// ============ ОТМЕТКА ПРОЧТЕНИЯ ============
+async function markAsRead(chatId) {
     if (!user || !chatId) return;
     
     const { data: unread } = await db.from('messages')
@@ -346,92 +456,27 @@ async function markAllAsRead(chatId) {
         read_at: new Date().toISOString()
     }));
     
-    await db.from('message_reads').upsert(reads, { 
+    await db.from('message_reads').upsert(reads, {
         onConflict: 'message_id,user_id',
-        ignoreDuplicates: true 
+        ignoreDuplicates: true
     });
 }
 
-// ============ ЗАГРУЗКА СООБЩЕНИЙ ============
-async function refreshMessages(silent = true) {
-    if (!chatId) return;
-    const { data: msgs } = await db.from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
-    
-    const container = document.getElementById('messages');
-    
-    if (!msgs || !msgs.length) {
-        container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
-        return;
-    }
-    
-    if (container.querySelector('.messages-center')) {
-        container.innerHTML = '';
-    }
-    
-    const existingMsgs = container.querySelectorAll('.msg');
-    const existingCount = existingMsgs.length;
-    
-    if (existingCount === msgs.length && silent) return;
-    
-    if (existingCount === 0 || !silent) {
-        container.innerHTML = '';
-        for (const m of msgs) {
-            await addMessageWithStatus(m, container);
-        }
-    } else {
-        for (let i = existingCount; i < msgs.length; i++) {
-            await addMessageWithStatus(msgs[i], container);
-        }
-    }
-    
-    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-    if (isAtBottom || !silent) {
-        container.scrollTop = container.scrollHeight;
-    }
-}
-
-// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ С ГАЛОЧКАМИ ============
-async function addMessageWithStatus(m, container) {
-    const isOutgoing = m.sender_id === user.id;
-    const d = document.createElement('div');
-    d.className = 'msg ' + (isOutgoing ? 'out' : 'in');
-    d.dataset.msgId = m.id;
-    
-    let statusHTML = '';
-    
-    if (isOutgoing) {
-        const { data: readData } = await db.from('message_reads')
-            .select('*')
-            .eq('message_id', m.id)
-            .maybeSingle();
-        
-        if (readData) {
-            statusHTML = ' <span style="color:#4CAF50;font-size:11px;">✓✓</span>';
-        } else {
-            statusHTML = ' <span style="color:rgba(255,255,255,0.5);font-size:11px;">✓</span>';
-        }
-    }
-    
-    d.innerHTML = `
-        <div class="msg-bubble">
-            <p>${m.content}${statusHTML}</p>
-            <div class="time">${new Date(m.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</div>
-        </div>
-    `;
-    container.appendChild(d);
-}
-
-// ============ ОТПРАВКА СООБЩЕНИЯ ============
+// ============ ОТПРАВКА ============
 async function sendMsg() {
     if (!chatId) return;
     const t = document.getElementById('msgInput').value.trim();
     if (!t) return;
     document.getElementById('msgInput').value = '';
-    await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
-    await refreshMessages(false);
+    
+    await db.from('messages').insert({
+        chat_id: chatId,
+        sender_id: user.id,
+        content: t
+    });
+    
+    // Сразу проверяем новые сообщения
+    await checkNewMessages();
 }
 
 // ============ СОЗДАНИЕ ЧАТА ============
@@ -447,7 +492,7 @@ async function createChat() {
     openChat(ch.id, nm);
 }
 
-// ============ ПЕРЕИМЕНОВАНИЕ ЧАТА ============
+// ============ ПЕРЕИМЕНОВАНИЕ ============
 async function renameChat() {
     if (!chatId) return;
     const nm = prompt('Новое название:', document.getElementById('chatTitle').textContent);
@@ -462,19 +507,17 @@ async function renameChat() {
 function goBack() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     chatId = null;
+    lastMsgCount = 0;
     document.getElementById('chatScreen').classList.remove('active');
     document.getElementById('chatsScreen').classList.remove('hidden');
     document.getElementById('backBtn').style.display = 'none';
     document.getElementById('chatTitle').textContent = 'Выберите чат';
     document.getElementById('chatAva').textContent = '?';
     document.getElementById('messages').innerHTML = '<div class="messages-center">Выберите чат для начала общения</div>';
-    loadChats();
 }
 
 // ============ ПРОЧЕЕ ============
-function copyTid() { 
-    navigator.clipboard.writeText(document.getElementById('profTid').textContent).then(() => alert('Скопировано!')); 
-}
+function copyTid() { navigator.clipboard.writeText(document.getElementById('profTid').textContent).then(() => alert('Скопировано!')); }
 
 function logout() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
