@@ -288,48 +288,78 @@
             });
         }
 
-        async function openChat(id, name) {
-            if (pollTimer) clearInterval(pollTimer);
-            chatId = id;
-            document.getElementById('chatTitle').textContent = name;
-            document.getElementById('chatAva').textContent = name[0];
-            await refreshMessages();
-            pollTimer = setInterval(refreshMessages, 1000);
-            loadChats();
-            // На мобилке переключаем экран
-            if (window.innerWidth <= 768) {
-                document.getElementById('chatScreen').classList.add('active');
-                document.getElementById('chatsScreen').classList.add('hidden');
-                document.getElementById('backBtn').style.display = 'flex';
-            }
-        }
+async function openChat(id, name) {
+    if (pollTimer) clearInterval(pollTimer);
+    chatId = id;
+    document.getElementById('chatTitle').textContent = name;
+    document.getElementById('chatAva').textContent = name[0];
+    await refreshMessages(false); // false = полная перезагрузка
+    pollTimer = setInterval(() => refreshMessages(true), 1000); // true = только новые
+    loadChats();
+    if (window.innerWidth <= 768) {
+        document.getElementById('chatScreen').classList.add('active');
+        document.getElementById('chatsScreen').classList.add('hidden');
+        document.getElementById('backBtn').style.display = 'flex';
+    }
+}
 
-        async function refreshMessages() {
-            if (!chatId) return;
-            const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
-            const container = document.getElementById('messages');
-            container.innerHTML = '';
-            if (msgs && msgs.length) {
-                msgs.forEach(m => {
-                    const d = document.createElement('div');
-                    d.className = 'msg ' + (m.sender_id === user.id ? 'out' : 'in');
-                    d.innerHTML = `<div class="msg-bubble"><p>${m.content}</p><div class="time">${new Date(m.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
-                    container.appendChild(d);
-                });
-            } else {
-                container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
-            }
-            container.scrollTop = container.scrollHeight;
+async function refreshMessages(silent = true) {
+    if (!chatId) return;
+    const { data: msgs } = await db.from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+    
+    const container = document.getElementById('messages');
+    
+    if (!msgs || !msgs.length) {
+        container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
+        return;
+    }
+    
+    // Убираем заглушку "Нет сообщений" если она есть
+    if (container.querySelector('.messages-center')) {
+        container.innerHTML = '';
+    }
+    
+    const existingMsgs = container.querySelectorAll('.msg');
+    const existingCount = existingMsgs.length;
+    
+    // Если сообщений столько же - ничего не делаем
+    if (existingCount === msgs.length && !silent) return;
+    
+    // Если это первая загрузка или принудительное обновление
+    if (existingCount === 0 || !silent) {
+        container.innerHTML = '';
+        msgs.forEach(m => addMessageToContainer(m, container));
+    } else {
+        // Добавляем только новые сообщения
+        for (let i = existingCount; i < msgs.length; i++) {
+            addMessageToContainer(msgs[i], container);
         }
+    }
+    
+    // Плавная прокрутка только если мы уже внизу
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    if (isAtBottom || !silent) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
 
-        async function sendMsg() {
-            if (!chatId) return;
-            const t = document.getElementById('msgInput').value.trim();
-            if (!t) return;
-            document.getElementById('msgInput').value = '';
-            await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
-            await refreshMessages();
-        }
+function addMessageToContainer(m, container) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (m.sender_id === user.id ? 'out' : 'in');
+    d.innerHTML = `<div class="msg-bubble"><p>${m.content}</p><div class="time">${new Date(m.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+    container.appendChild(d);
+}
+ async function sendMsg() {
+    if (!chatId) return;
+    const t = document.getElementById('msgInput').value.trim();
+    if (!t) return;
+    document.getElementById('msgInput').value = '';
+    await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
+    await refreshMessages(false); // полная перезагрузка после отправки
+}
 
         async function createChat() {
             const u = prompt('Имя пользователя:');
