@@ -162,18 +162,19 @@
 
         <!-- ЭКРАН СООБЩЕНИЙ -->
         <div class="chat-screen" id="chatScreen">
-            <div class="chat-header">
-                <div class="chat-header-info">
-                    <div class="ava-lg" id="chatAva">?</div>
-                    <div class="chat-header-text">
-                        <div class="chat-title" id="chatTitle" onclick="renameChat()">Выберите чат</div>
-                        <div class="chat-status"><span class="status-dot"></span> Не в сети</div>
-                    </div>
-                </div>
-                <div class="chat-actions">
-                    <button class="hbtn" onclick="renameChat()" title="Переименовать">✏️</button>
-                </div>
-            </div>
+           <div class="chat-header">
+    <div class="chat-header-info">
+        <div class="ava-lg" id="chatAva">?</div>
+        <div class="chat-header-text">
+            <div class="chat-title" id="chatTitle" onclick="renameChat()">Выберите чат</div>
+            <div class="chat-status"><span class="status-dot"></span> Не в сети</div>
+        </div>
+    </div>
+    <div class="chat-actions">
+        <button class="hbtn" onclick="renameChat()" title="Переименовать">✏️</button>
+        <button class="hbtn" onclick="deleteChat()" title="Удалить чат" style="color:var(--red)">🗑️</button>
+    </div>
+</div>
             <div class="messages" id="messages"><div class="messages-center">Выберите чат для начала общения</div></div>
             <div class="input-area">
                 <input type="text" id="msgInput" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendMsg()">
@@ -421,6 +422,54 @@ async function checkNewMessages() {
     // Отмечаем как прочитанные
     markAsRead(chatId);
     updateUnreadBadge(chatId);
+}
+    // ============ УДАЛЕНИЕ ЧАТА ============
+async function deleteChat() {
+    if (!chatId) {
+        alert('Выберите чат');
+        return;
+    }
+    
+    const chatName = document.getElementById('chatTitle').textContent;
+    const confirmed = confirm('Вы уверены, что хотите удалить чат "' + chatName + '"?\n\nВсе сообщения будут удалены безвозвратно!');
+    
+    if (!confirmed) return;
+    
+    // Удаляем сообщения
+    await db.from('messages').delete().eq('chat_id', chatId);
+    
+    // Удаляем участников
+    await db.from('chat_members').delete().eq('chat_id', chatId);
+    
+    // Удаляем прочтения
+    await db.from('message_reads').delete().eq('message_id', chatId);
+    
+    // Удаляем сам чат
+    const { error } = await db.from('chats').delete().eq('id', chatId);
+    
+    if (error) {
+        alert('Ошибка удаления: ' + error.message);
+        return;
+    }
+    
+    // Очищаем экран
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    chatId = null;
+    lastMsgCount = 0;
+    
+    document.getElementById('chatTitle').textContent = 'Выберите чат';
+    document.getElementById('chatAva').textContent = '?';
+    document.getElementById('messages').innerHTML = '<div class="messages-center">Чат удален. Выберите другой чат.</div>';
+    
+    // Обновляем список чатов
+    loadChats();
+    
+    // На мобилке возвращаемся к списку
+    if (window.innerWidth <= 768) {
+        goBack();
+    }
+    
+    alert('Чат удален');
 }
 
 // ============ ДОБАВЛЕНИЕ ОДНОГО СООБЩЕНИЯ ============
