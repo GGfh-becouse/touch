@@ -475,7 +475,7 @@
         }
 
         async function createChat() {
-            const query = prompt('Введите имя пользователя, email или TID:');
+            const query = prompt('Введите имя пользователя, ник, email или TID:');
             if (!query) return;
             const { data: found } = await db.from('users').select('*').or(`username.eq.${query},display_name.eq.${query},tid.eq.${query},email.eq.${query}`).maybeSingle();
             if (!found) { alert('Пользователь не найден'); return; }
