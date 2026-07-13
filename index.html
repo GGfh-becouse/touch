@@ -132,6 +132,16 @@
     text-align: center;
     line-height: 1.4;
 }
+        .msg-bubble.deleted {
+    opacity: 0.5;
+    font-style: italic;
+    background: var(--card) !important;
+    color: var(--text2) !important;
+}
+        @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
     </style>
 </head>
 <body>
@@ -390,7 +400,6 @@ async function openChat(id, name) {
     }
 }
 
-// ============ ЗАГРУЗКА СООБЩЕНИЙ ============
 async function loadMessages() {
     if (!chatId) return;
     
@@ -439,20 +448,140 @@ async function checkNewMessages() {
     markAsRead(chatId);
 }
 
-// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ ============
+// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ С КОНТЕКСТНЫМ МЕНЮ ============
 function appendMessage(m, container) {
     const isOutgoing = m.sender_id === user.id;
     const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     
     const div = document.createElement('div');
     div.className = 'msg ' + (isOutgoing ? 'out' : 'in');
+    div.dataset.msgId = m.id;
+    div.dataset.senderId = m.sender_id;
+    
     div.innerHTML = `
         <div class="msg-bubble">
             <p>${m.content}</p>
             <div class="time">${time}</div>
         </div>
     `;
+    
+    // ПКМ (правая кнопка мыши) - для компьютера
+    div.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        showMessageContextMenu(e.clientX, e.clientY, m.id, m.sender_id);
+    });
+    
+    // Долгое нажатие - для телефона
+    let longPressTimer;
+    div.addEventListener('touchstart', function(e) {
+        longPressTimer = setTimeout(() => {
+            showMessageContextMenu(e.touches[0].clientX, e.touches[0].clientY, m.id, m.sender_id);
+        }, 500); // 500 мс = полсекунды
+    });
+    
+    div.addEventListener('touchend', function() {
+        clearTimeout(longPressTimer);
+    });
+    
+    div.addEventListener('touchmove', function() {
+        clearTimeout(longPressTimer);
+    });
+    
     container.appendChild(div);
+}
+
+// ============ КОНТЕКСТНОЕ МЕНЮ СООБЩЕНИЯ ============
+function showMessageContextMenu(x, y, msgId, senderId) {
+    // Удаляем старое меню если есть
+    const oldMenu = document.getElementById('msgContextMenu');
+    if (oldMenu) oldMenu.remove();
+    
+    // Можно удалять только свои сообщения
+    if (senderId !== user.id) return;
+    
+    const menu = document.createElement('div');
+    menu.id = 'msgContextMenu';
+    menu.style.cssText = `
+        position: fixed;
+        left: ${x}px;
+        top: ${y}px;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 8px 0;
+        z-index: 300;
+        min-width: 160px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        animation: fadeIn 0.15s ease;
+    `;
+    
+    menu.innerHTML = `
+        <button onclick="deleteMessage('${msgId}')" style="
+            width: 100%;
+            padding: 10px 16px;
+            text-align: left;
+            font-size: 14px;
+            color: var(--red);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+        ">
+            🗑️ Удалить сообщение
+        </button>
+        <button onclick="closeContextMenu()" style="
+            width: 100%;
+            padding: 10px 16px;
+            text-align: left;
+            font-size: 13px;
+            color: var(--text2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+        ">
+            ✖ Отмена
+        </button>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    // Закрываем меню при клике вне его
+    setTimeout(() => {
+        document.addEventListener('click', closeContextMenu);
+        document.addEventListener('touchstart', closeContextMenu);
+    }, 100);
+}
+
+function closeContextMenu() {
+    const menu = document.getElementById('msgContextMenu');
+    if (menu) menu.remove();
+    document.removeEventListener('click', closeContextMenu);
+    document.removeEventListener('touchstart', closeContextMenu);
+}
+
+// ============ УДАЛЕНИЕ СООБЩЕНИЯ ============
+async function deleteMessage(msgId) {
+    closeContextMenu();
+    
+    if (!confirm('Удалить это сообщение?')) return;
+    
+    const { error } = await db.from('messages')
+        .update({ is_deleted: true, content: '🗑️ Сообщение удалено' })
+        .eq('id', msgId);
+    
+    if (error) {
+        alert('Ошибка: ' + error.message);
+        return;
+    }
+    
+    // Обновляем отображение
+    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (msgElement) {
+        msgElement.querySelector('.msg-bubble p').textContent = '🗑️ Сообщение удалено';
+        msgElement.querySelector('.msg-bubble').style.opacity = '0.5';
+        msgElement.querySelector('.msg-bubble').style.fontStyle = 'italic';
+    }
 }
 
 // ============ ОТМЕТКА ПРОЧТЕНИЯ ============
