@@ -263,6 +263,20 @@ function refreshUI() {
     document.getElementById('profDate').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
 }
 
+// ============ ОБНОВЛЕНИЕ ОТОБРАЖАЕМОГО ИМЕНИ ============
+async function updateDisplayName() {
+    const newName = prompt('Введите новое отображаемое имя:', user.display_name || user.username);
+    if (!newName || newName === user.display_name) return;
+    
+    const { error } = await db.from('users').update({ display_name: newName }).eq('id', user.id);
+    if (error) { alert('Ошибка: ' + error.message); return; }
+    
+    user.display_name = newName;
+    localStorage.setItem('touchUser', JSON.stringify(user));
+    refreshUI();
+    alert('✅ Имя изменено на: ' + newName);
+}
+
 // ============ АВТОРИЗАЦИЯ ============
 async function doAuth() {
     const email = document.getElementById('authEmail').value.trim();
@@ -273,11 +287,12 @@ async function doAuth() {
     try {
         if (isLogin) {
             const { data, error } = await db.from('users').select('*').eq('email', email).eq('username', username).single();
-            if (error || !data) { err.textContent = 'Не найдено'; err.style.display = 'block'; return; }
+            if (error || !data) { err.textContent = 'Пользователь не найден'; err.style.display = 'block'; return; }
             user = data;
+            await db.from('users').update({ status: 'online', last_seen: new Date() }).eq('id', user.id);
         } else {
             const { data: ex } = await db.from('users').select('id').or(`email.eq.${email},username.eq.${username}`).maybeSingle();
-            if (ex) { err.textContent = 'Уже существует'; err.style.display = 'block'; return; }
+            if (ex) { err.textContent = 'Пользователь уже существует'; err.style.display = 'block'; return; }
             const { data: nu, error } = await db.from('users').insert({ email, username, display_name: username, status: 'online' }).select().single();
             if (error) throw error;
             user = nu;
@@ -301,46 +316,27 @@ document.getElementById('authToggleBtn').addEventListener('click', function() {
 // ============ АВТООБНОВЛЕНИЕ ЧАТОВ ============
 function startChatsPolling() {
     if (chatsPollTimer) clearInterval(chatsPollTimer);
-    chatsPollTimer = setInterval(updateChatsBadges, 2000); // Каждые 2 секунды
+    chatsPollTimer = setInterval(updateChatsBadges, 2000);
 }
 
 async function updateChatsBadges() {
     if (!user) return;
-    
     try {
-        const { data } = await db.from('chat_members')
-            .select('chat_id, chats(id, name)')
-            .eq('user_id', user.id);
-        
+        const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
         if (!data) return;
-        
         for (const item of data) {
-            const { data: count } = await db.rpc('get_unread_count', {
-                chat_id: item.chats.id,
-                user_id: user.id
-            });
-            
+            const { data: count } = await db.rpc('get_unread_count', { chat_id: item.chats.id, user_id: user.id });
             const unread = count || 0;
             const badge = document.getElementById('badge-' + item.chats.id);
             const lastMsg = document.getElementById('last-' + item.chats.id);
-            
             if (badge) {
-                if (unread > 0) {
-                    badge.textContent = unread;
-                    badge.style.display = 'inline-block';
-                } else {
-                    badge.style.display = 'none';
-                }
+                badge.textContent = unread;
+                badge.style.display = unread > 0 ? 'inline-block' : 'none';
             }
-            
-            if (lastMsg && unread > 0) {
-                lastMsg.textContent = unread + ' новых сообщений';
-                lastMsg.style.color = 'var(--red)';
-                lastMsg.style.fontWeight = '600';
-            } else if (lastMsg) {
-                lastMsg.textContent = 'Нет новых';
-                lastMsg.style.color = 'var(--text2)';
-                lastMsg.style.fontWeight = '400';
+            if (lastMsg) {
+                lastMsg.textContent = unread > 0 ? unread + ' новых' : 'Нет новых';
+                lastMsg.style.color = unread > 0 ? 'var(--red)' : 'var(--text2)';
+                lastMsg.style.fontWeight = unread > 0 ? '600' : '400';
             }
         }
     } catch(e) {}
@@ -351,7 +347,6 @@ async function loadChats() {
     if (!user) return;
     const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
     const list = document.getElementById('chatsList');
-    
     if (data && data.length) {
         let html = '';
         for (const item of data) {
@@ -364,12 +359,9 @@ async function loadChats() {
                         <div class="chat-last" id="last-${item.chats.id}">Нет новых</div>
                     </div>
                     <div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div>
-                </div>
-            `;
+                </div>`;
         }
         list.innerHTML = html;
-        
-        // Сразу обновляем бейджи
         updateChatsBadges();
     } else {
         list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
@@ -381,18 +373,12 @@ async function openChat(id, name) {
     if (pollTimer) clearInterval(pollTimer);
     chatId = id;
     lastMsgCount = 0;
-    
     document.getElementById('chatTitle').textContent = name;
     document.getElementById('chatAva').textContent = name[0];
-    
     await loadMessages();
     markAsRead(id);
-    
-    // Сразу обновляем бейдж этого чата
     updateChatsBadges();
-    
     pollTimer = setInterval(checkNewMessages, 1000);
-    
     if (window.innerWidth <= 768) {
         document.getElementById('chatScreen').classList.add('active');
         document.getElementById('chatsScreen').classList.add('hidden');
@@ -402,55 +388,36 @@ async function openChat(id, name) {
 
 async function loadMessages() {
     if (!chatId) return;
-    
-    const { data: msgs } = await db.from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
-    
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
     const container = document.getElementById('messages');
     container.innerHTML = '';
-    
     if (msgs && msgs.length) {
         lastMsgCount = msgs.length;
-        for (const m of msgs) {
-            appendMessage(m, container);
-        }
+        for (const m of msgs) appendMessage(m, container);
     } else {
         container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
     }
-    
     container.scrollTop = container.scrollHeight;
 }
 
 // ============ ПРОВЕРКА НОВЫХ СООБЩЕНИЙ ============
 async function checkNewMessages() {
     if (!chatId) return;
-    
-    const { data: msgs } = await db.from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
-    
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
     if (!msgs || msgs.length <= lastMsgCount) return;
-    
     const container = document.getElementById('messages');
     const placeholder = container.querySelector('.messages-center');
     if (placeholder) placeholder.remove();
-    
-    for (let i = lastMsgCount; i < msgs.length; i++) {
-        appendMessage(msgs[i], container);
-    }
-    
+    for (let i = lastMsgCount; i < msgs.length; i++) appendMessage(msgs[i], container);
     lastMsgCount = msgs.length;
     container.scrollTop = container.scrollHeight;
-    
     markAsRead(chatId);
 }
 
-// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ С КОНТЕКСТНЫМ МЕНЮ ============
+// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ ============
 function appendMessage(m, container) {
     const isOutgoing = m.sender_id === user.id;
+    const isDeleted = m.is_deleted;
     const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     
     const div = document.createElement('div');
@@ -459,152 +426,74 @@ function appendMessage(m, container) {
     div.dataset.senderId = m.sender_id;
     
     div.innerHTML = `
-        <div class="msg-bubble">
-            <p>${m.content}</p>
+        <div class="msg-bubble${isDeleted ? ' deleted' : ''}">
+            <p>${isDeleted ? '🗑️ Сообщение удалено' : m.content}</p>
             <div class="time">${time}</div>
-        </div>
-    `;
+        </div>`;
     
-    // ПКМ (правая кнопка мыши) - для компьютера
+    // Контекстное меню (ПКМ / долгое нажатие)
     div.addEventListener('contextmenu', function(e) {
         e.preventDefault();
-        showMessageContextMenu(e.clientX, e.clientY, m.id, m.sender_id);
+        if (m.sender_id === user.id) showMessageMenu(e.clientX, e.clientY, m.id);
     });
     
-    // Долгое нажатие - для телефона
-    let longPressTimer;
+    let longPress;
     div.addEventListener('touchstart', function(e) {
-        longPressTimer = setTimeout(() => {
-            showMessageContextMenu(e.touches[0].clientX, e.touches[0].clientY, m.id, m.sender_id);
-        }, 500); // 500 мс = полсекунды
+        longPress = setTimeout(() => {
+            if (m.sender_id === user.id) showMessageMenu(e.touches[0].clientX, e.touches[0].clientY, m.id);
+        }, 500);
     });
-    
-    div.addEventListener('touchend', function() {
-        clearTimeout(longPressTimer);
-    });
-    
-    div.addEventListener('touchmove', function() {
-        clearTimeout(longPressTimer);
-    });
+    div.addEventListener('touchend', () => clearTimeout(longPress));
+    div.addEventListener('touchmove', () => clearTimeout(longPress));
     
     container.appendChild(div);
 }
 
-// ============ КОНТЕКСТНОЕ МЕНЮ СООБЩЕНИЯ ============
-function showMessageContextMenu(x, y, msgId, senderId) {
-    // Удаляем старое меню если есть
-    const oldMenu = document.getElementById('msgContextMenu');
-    if (oldMenu) oldMenu.remove();
-    
-    // Можно удалять только свои сообщения
-    if (senderId !== user.id) return;
-    
+// ============ МЕНЮ СООБЩЕНИЯ ============
+function showMessageMenu(x, y, msgId) {
+    closeMessageMenu();
     const menu = document.createElement('div');
-    menu.id = 'msgContextMenu';
-    menu.style.cssText = `
-        position: fixed;
-        left: ${x}px;
-        top: ${y}px;
-        background: var(--bg2);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 8px 0;
-        z-index: 300;
-        min-width: 160px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        animation: fadeIn 0.15s ease;
-    `;
-    
+    menu.id = 'msgMenu';
+    menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:8px 0;z-index:300;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);`;
     menu.innerHTML = `
-        <button onclick="deleteMessage('${msgId}')" style="
-            width: 100%;
-            padding: 10px 16px;
-            text-align: left;
-            font-size: 14px;
-            color: var(--red);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: background 0.15s;
-        ">
-            🗑️ Удалить сообщение
-        </button>
-        <button onclick="closeContextMenu()" style="
-            width: 100%;
-            padding: 10px 16px;
-            text-align: left;
-            font-size: 13px;
-            color: var(--text2);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: background 0.15s;
-        ">
-            ✖ Отмена
-        </button>
-    `;
-    
+        <button onclick="deleteMessage('${msgId}')" style="width:100%;padding:10px 16px;text-align:left;font-size:14px;color:var(--red);display:flex;align-items:center;gap:8px">🗑️ Удалить</button>
+        <button onclick="closeMessageMenu()" style="width:100%;padding:10px 16px;text-align:left;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px">✖ Отмена</button>`;
     document.body.appendChild(menu);
-    
-    // Закрываем меню при клике вне его
     setTimeout(() => {
-        document.addEventListener('click', closeContextMenu);
-        document.addEventListener('touchstart', closeContextMenu);
+        document.addEventListener('click', closeMessageMenu);
+        document.addEventListener('touchstart', closeMessageMenu);
     }, 100);
 }
 
-function closeContextMenu() {
-    const menu = document.getElementById('msgContextMenu');
+function closeMessageMenu() {
+    const menu = document.getElementById('msgMenu');
     if (menu) menu.remove();
-    document.removeEventListener('click', closeContextMenu);
-    document.removeEventListener('touchstart', closeContextMenu);
+    document.removeEventListener('click', closeMessageMenu);
+    document.removeEventListener('touchstart', closeMessageMenu);
 }
 
 // ============ УДАЛЕНИЕ СООБЩЕНИЯ ============
 async function deleteMessage(msgId) {
-    closeContextMenu();
-    
-    if (!confirm('Удалить это сообщение?')) return;
-    
-    const { error } = await db.from('messages')
-        .update({ is_deleted: true, content: '🗑️ Сообщение удалено' })
-        .eq('id', msgId);
-    
-    if (error) {
-        alert('Ошибка: ' + error.message);
-        return;
-    }
-    
-    // Обновляем отображение
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    if (msgElement) {
-        msgElement.querySelector('.msg-bubble p').textContent = '🗑️ Сообщение удалено';
-        msgElement.querySelector('.msg-bubble').style.opacity = '0.5';
-        msgElement.querySelector('.msg-bubble').style.fontStyle = 'italic';
+    closeMessageMenu();
+    if (!confirm('Удалить сообщение?')) return;
+    const { error } = await db.from('messages').update({ is_deleted: true, content: '🗑️ Сообщение удалено' }).eq('id', msgId);
+    if (error) { alert('Ошибка: ' + error.message); return; }
+    const el = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (el) {
+        el.querySelector('.msg-bubble').classList.add('deleted');
+        el.querySelector('p').textContent = '🗑️ Сообщение удалено';
     }
 }
 
 // ============ ОТМЕТКА ПРОЧТЕНИЯ ============
 async function markAsRead(chatId) {
     if (!user || !chatId) return;
-    
-    const { data: unread } = await db.from('messages')
-        .select('id')
-        .eq('chat_id', chatId)
-        .neq('sender_id', user.id);
-    
+    const { data: unread } = await db.from('messages').select('id').eq('chat_id', chatId).neq('sender_id', user.id);
     if (!unread || !unread.length) return;
-    
-    const reads = unread.map(msg => ({
-        message_id: msg.id,
-        user_id: user.id,
-        read_at: new Date().toISOString()
-    }));
-    
-    await db.from('message_reads').upsert(reads, {
-        onConflict: 'message_id,user_id',
-        ignoreDuplicates: true
-    });
+    await db.from('message_reads').upsert(
+        unread.map(m => ({ message_id: m.id, user_id: user.id, read_at: new Date().toISOString() })),
+        { onConflict: 'message_id,user_id', ignoreDuplicates: true }
+    );
 }
 
 // ============ ОТПРАВКА ============
@@ -613,32 +502,39 @@ async function sendMsg() {
     const t = document.getElementById('msgInput').value.trim();
     if (!t) return;
     document.getElementById('msgInput').value = '';
-    
-    await db.from('messages').insert({
-        chat_id: chatId,
-        sender_id: user.id,
-        content: t
-    });
-    
+    await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
     await checkNewMessages();
 }
 
-// ============ СОЗДАНИЕ ЧАТА ============
+// ============ СОЗДАНИЕ ЧАТА С ПРОСМОТРОМ ПРОФИЛЯ ============
 async function createChat() {
-    const u = prompt('Имя пользователя:');
-    if (!u || u === user.username) return;
-    const { data: f } = await db.from('users').select('*').eq('username', u).single();
-    if (!f) { alert('Не найден'); return; }
+    const query = prompt('Введите имя пользователя, email или TID:');
+    if (!query) return;
     
-    // Проверяем существующий чат
-    const { data: existing } = await db.rpc('get_or_create_chat', {
-        user1: user.id,
-        user2: f.id,
-        chat_name: user.display_name + ' & ' + f.display_name
+    const { data: found } = await db.from('users').select('*')
+        .or(`username.eq.${query},display_name.eq.${query},tid.eq.${query},email.eq.${query}`)
+        .maybeSingle();
+    
+    if (!found) { alert('Пользователь не найден'); return; }
+    if (found.id === user.id) { alert('Нельзя создать чат с собой'); return; }
+    
+    const confirmed = confirm(
+        `👤 Имя: ${found.display_name || found.username}\n` +
+        `📧 Username: ${found.username}\n` +
+        `🆔 TID: ${found.tid}\n` +
+        `📅 Регистрация: ${new Date(found.created_at).toLocaleDateString('ru-RU')}\n\n` +
+        `Создать чат?`
+    );
+    
+    if (!confirmed) return;
+    
+    const { data: chatId } = await db.rpc('get_or_create_chat', {
+        user1: user.id, user2: found.id,
+        chat_name: (user.display_name || user.username) + ' & ' + (found.display_name || found.username)
     });
     
     loadChats();
-    openChat(existing, user.display_name + ' & ' + f.display_name);
+    openChat(chatId, (user.display_name || user.username) + ' & ' + (found.display_name || found.username));
 }
 
 // ============ ПЕРЕИМЕНОВАНИЕ ============
@@ -655,28 +551,23 @@ async function renameChat() {
 // ============ УДАЛЕНИЕ ЧАТА ============
 async function deleteChat() {
     if (!chatId) return;
-    const name = document.getElementById('chatTitle').textContent;
-    if (!confirm('Удалить чат "' + name + '"?')) return;
-    
+    if (!confirm('Удалить чат "' + document.getElementById('chatTitle').textContent + '"?')) return;
     await db.from('messages').delete().eq('chat_id', chatId);
     await db.from('chat_members').delete().eq('chat_id', chatId);
     await db.from('chats').delete().eq('id', chatId);
-    
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     chatId = null;
     document.getElementById('chatTitle').textContent = 'Выберите чат';
     document.getElementById('chatAva').textContent = '?';
     document.getElementById('messages').innerHTML = '<div class="messages-center">Чат удален</div>';
     loadChats();
-    
     if (window.innerWidth <= 768) goBack();
 }
 
 // ============ НАВИГАЦИЯ ============
 function goBack() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-    chatId = null;
-    lastMsgCount = 0;
+    chatId = null; lastMsgCount = 0;
     document.getElementById('chatScreen').classList.remove('active');
     document.getElementById('chatsScreen').classList.remove('hidden');
     document.getElementById('backBtn').style.display = 'none';
@@ -685,7 +576,7 @@ function goBack() {
     document.getElementById('messages').innerHTML = '<div class="messages-center">Выберите чат для начала общения</div>';
 }
 
-// ============ ПРОЧЕЕ ============
+// ============ ВЫХОД ============
 function copyTid() { navigator.clipboard.writeText(document.getElementById('profTid').textContent).then(() => alert('Скопировано!')); }
 
 function logout() {
@@ -694,8 +585,7 @@ function logout() {
     if (user) db.from('users').update({ status: 'offline', last_seen: new Date() }).eq('id', user.id);
     localStorage.removeItem('touchUser');
     user = null; chatId = null;
-    hideModal('profileModal');
-    goBack();
+    hideModal('profileModal'); goBack();
     document.getElementById('chatsList').innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
     document.getElementById('headAva').textContent = '?';
     showModal('authModal');
