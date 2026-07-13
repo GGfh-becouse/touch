@@ -218,6 +218,7 @@ let user = null;
 let chatId = null;
 let isLogin = true;
 let pollTimer = null;
+let chatsPollTimer = null;
 let lastMsgCount = 0;
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
@@ -227,6 +228,7 @@ if (saved) {
     hideModal('authModal');
     refreshUI();
     loadChats();
+    startChatsPolling();
 } else {
     showModal('authModal');
 }
@@ -274,6 +276,7 @@ async function doAuth() {
         hideModal('authModal');
         refreshUI();
         loadChats();
+        startChatsPolling();
     } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
 }
 
@@ -285,17 +288,61 @@ document.getElementById('authToggleBtn').addEventListener('click', function() {
     this.textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
 });
 
+// ============ АВТООБНОВЛЕНИЕ ЧАТОВ ============
+function startChatsPolling() {
+    if (chatsPollTimer) clearInterval(chatsPollTimer);
+    chatsPollTimer = setInterval(updateChatsBadges, 2000); // Каждые 2 секунды
+}
+
+async function updateChatsBadges() {
+    if (!user) return;
+    
+    try {
+        const { data } = await db.from('chat_members')
+            .select('chat_id, chats(id, name)')
+            .eq('user_id', user.id);
+        
+        if (!data) return;
+        
+        for (const item of data) {
+            const { data: count } = await db.rpc('get_unread_count', {
+                chat_id: item.chats.id,
+                user_id: user.id
+            });
+            
+            const unread = count || 0;
+            const badge = document.getElementById('badge-' + item.chats.id);
+            const lastMsg = document.getElementById('last-' + item.chats.id);
+            
+            if (badge) {
+                if (unread > 0) {
+                    badge.textContent = unread;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+            
+            if (lastMsg && unread > 0) {
+                lastMsg.textContent = unread + ' новых сообщений';
+                lastMsg.style.color = 'var(--red)';
+                lastMsg.style.fontWeight = '600';
+            } else if (lastMsg) {
+                lastMsg.textContent = 'Нет новых';
+                lastMsg.style.color = 'var(--text2)';
+                lastMsg.style.fontWeight = '400';
+            }
+        }
+    } catch(e) {}
+}
+
 // ============ ЧАТЫ ============
 async function loadChats() {
     if (!user) return;
     const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
     const list = document.getElementById('chatsList');
     
-    // Сохраняем текущий скролл
-    const scrollTop = list.scrollTop;
-    
     if (data && data.length) {
-        // Обновляем только содержимое, не трогая DOM без нужды
         let html = '';
         for (const item of data) {
             const isActive = chatId === item.chats.id;
@@ -304,44 +351,19 @@ async function loadChats() {
                     <div class="ava">${(item.chats.name || '?')[0]}</div>
                     <div class="chat-info">
                         <div class="chat-name">${item.chats.name}</div>
-                        <div class="chat-last" id="last-${item.chats.id}">Загрузка...</div>
+                        <div class="chat-last" id="last-${item.chats.id}">Нет новых</div>
                     </div>
                     <div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div>
                 </div>
             `;
         }
         list.innerHTML = html;
-        list.scrollTop = scrollTop;
         
-        // Загружаем счетчики асинхронно
-        for (const item of data) {
-            updateUnreadBadge(item.chats.id);
-        }
+        // Сразу обновляем бейджи
+        updateChatsBadges();
     } else {
         list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
     }
-}
-
-async function updateUnreadBadge(chatId) {
-    if (!user) return;
-    try {
-        const { data } = await db.rpc('get_unread_count', { chat_id: chatId, user_id: user.id });
-        const count = data || 0;
-        const badge = document.getElementById('badge-' + chatId);
-        const lastMsg = document.getElementById('last-' + chatId);
-        
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-        if (lastMsg) {
-            lastMsg.textContent = count > 0 ? count + ' новых' : 'Нет новых';
-        }
-    } catch(e) {}
 }
 
 // ============ ОТКРЫТИЕ ЧАТА ============
@@ -356,11 +378,9 @@ async function openChat(id, name) {
     await loadMessages();
     markAsRead(id);
     
-    // Обновляем счетчик этого чата
-    updateUnreadBadge(id);
-    loadChats();
+    // Сразу обновляем бейдж этого чата
+    updateChatsBadges();
     
-    // Запускаем проверку новых сообщений
     pollTimer = setInterval(checkNewMessages, 1000);
     
     if (window.innerWidth <= 768) {
@@ -370,7 +390,7 @@ async function openChat(id, name) {
     }
 }
 
-// ============ ЗАГРУЗКА СООБЩЕНИЙ (только при открытии) ============
+// ============ ЗАГРУЗКА СООБЩЕНИЙ ============
 async function loadMessages() {
     if (!chatId) return;
     
@@ -394,7 +414,7 @@ async function loadMessages() {
     container.scrollTop = container.scrollHeight;
 }
 
-// ============ ПРОВЕРКА НОВЫХ СООБЩЕНИЙ (без перезагрузки) ============
+// ============ ПРОВЕРКА НОВЫХ СООБЩЕНИЙ ============
 async function checkNewMessages() {
     if (!chatId) return;
     
@@ -406,12 +426,9 @@ async function checkNewMessages() {
     if (!msgs || msgs.length <= lastMsgCount) return;
     
     const container = document.getElementById('messages');
-    
-    // Убираем заглушку
     const placeholder = container.querySelector('.messages-center');
     if (placeholder) placeholder.remove();
     
-    // Добавляем только новые сообщения
     for (let i = lastMsgCount; i < msgs.length; i++) {
         appendMessage(msgs[i], container);
     }
@@ -419,60 +436,10 @@ async function checkNewMessages() {
     lastMsgCount = msgs.length;
     container.scrollTop = container.scrollHeight;
     
-    // Отмечаем как прочитанные
     markAsRead(chatId);
-    updateUnreadBadge(chatId);
-}
-    // ============ УДАЛЕНИЕ ЧАТА ============
-async function deleteChat() {
-    if (!chatId) {
-        alert('Выберите чат');
-        return;
-    }
-    
-    const chatName = document.getElementById('chatTitle').textContent;
-    const confirmed = confirm('Вы уверены, что хотите удалить чат "' + chatName + '"?\n\nВсе сообщения будут удалены безвозвратно!');
-    
-    if (!confirmed) return;
-    
-    // Удаляем сообщения
-    await db.from('messages').delete().eq('chat_id', chatId);
-    
-    // Удаляем участников
-    await db.from('chat_members').delete().eq('chat_id', chatId);
-    
-    // Удаляем прочтения
-    await db.from('message_reads').delete().eq('message_id', chatId);
-    
-    // Удаляем сам чат
-    const { error } = await db.from('chats').delete().eq('id', chatId);
-    
-    if (error) {
-        alert('Ошибка удаления: ' + error.message);
-        return;
-    }
-    
-    // Очищаем экран
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-    chatId = null;
-    lastMsgCount = 0;
-    
-    document.getElementById('chatTitle').textContent = 'Выберите чат';
-    document.getElementById('chatAva').textContent = '?';
-    document.getElementById('messages').innerHTML = '<div class="messages-center">Чат удален. Выберите другой чат.</div>';
-    
-    // Обновляем список чатов
-    loadChats();
-    
-    // На мобилке возвращаемся к списку
-    if (window.innerWidth <= 768) {
-        goBack();
-    }
-    
-    alert('Чат удален');
 }
 
-// ============ ДОБАВЛЕНИЕ ОДНОГО СООБЩЕНИЯ ============
+// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ ============
 function appendMessage(m, container) {
     const isOutgoing = m.sender_id === user.id;
     const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -524,7 +491,6 @@ async function sendMsg() {
         content: t
     });
     
-    // Сразу проверяем новые сообщения
     await checkNewMessages();
 }
 
@@ -534,11 +500,16 @@ async function createChat() {
     if (!u || u === user.username) return;
     const { data: f } = await db.from('users').select('*').eq('username', u).single();
     if (!f) { alert('Не найден'); return; }
-    const nm = user.display_name + ' & ' + f.display_name;
-    const { data: ch } = await db.from('chats').insert({ name: nm }).select().single();
-    await db.from('chat_members').insert([{ chat_id: ch.id, user_id: user.id }, { chat_id: ch.id, user_id: f.id }]);
+    
+    // Проверяем существующий чат
+    const { data: existing } = await db.rpc('get_or_create_chat', {
+        user1: user.id,
+        user2: f.id,
+        chat_name: user.display_name + ' & ' + f.display_name
+    });
+    
     loadChats();
-    openChat(ch.id, nm);
+    openChat(existing, user.display_name + ' & ' + f.display_name);
 }
 
 // ============ ПЕРЕИМЕНОВАНИЕ ============
@@ -550,6 +521,26 @@ async function renameChat() {
     document.getElementById('chatTitle').textContent = nm;
     document.getElementById('chatAva').textContent = nm[0];
     loadChats();
+}
+
+// ============ УДАЛЕНИЕ ЧАТА ============
+async function deleteChat() {
+    if (!chatId) return;
+    const name = document.getElementById('chatTitle').textContent;
+    if (!confirm('Удалить чат "' + name + '"?')) return;
+    
+    await db.from('messages').delete().eq('chat_id', chatId);
+    await db.from('chat_members').delete().eq('chat_id', chatId);
+    await db.from('chats').delete().eq('id', chatId);
+    
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    chatId = null;
+    document.getElementById('chatTitle').textContent = 'Выберите чат';
+    document.getElementById('chatAva').textContent = '?';
+    document.getElementById('messages').innerHTML = '<div class="messages-center">Чат удален</div>';
+    loadChats();
+    
+    if (window.innerWidth <= 768) goBack();
 }
 
 // ============ НАВИГАЦИЯ ============
@@ -570,6 +561,7 @@ function copyTid() { navigator.clipboard.writeText(document.getElementById('prof
 
 function logout() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (chatsPollTimer) { clearInterval(chatsPollTimer); chatsPollTimer = null; }
     if (user) db.from('users').update({ status: 'offline', last_seen: new Date() }).eq('id', user.id);
     localStorage.removeItem('touchUser');
     user = null; chatId = null;
