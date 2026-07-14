@@ -239,59 +239,54 @@ let lastMsgCount = 0;
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 async function initApp() {
     const { data: { session } } = await db.auth.getSession();
-    if (session) {
-        await loadUserProfile(session.user.id);
-        hideModal('authModal');
-        refreshUI();
-        loadChats();
-        startChatsPolling();
-    } else {
-        showModal('authModal');
+    
+    if (session?.user) {
+        const loaded = await loadUserProfile(session.user.id);
+        if (loaded) {
+            hideModal('authModal');
+            refreshUI();
+            loadChats();
+            startChatsPolling();
+            hideSplash();
+            return;
+        }
     }
+    
+    // Нет сессии - показываем вход через 1 секунду
+    setTimeout(() => {
+        showModal('authModal');
+        hideSplash();
+    }, 1000);
 }
 
 async function loadUserProfile(authId) {
-    try {
-        const { data, error } = await db.from('users')
-            .select('*')
-            .eq('id', authId)
-            .maybeSingle();
-        
-        if (error) {
-            console.error('Ошибка загрузки профиля:', error);
-            // Если пользователь в auth есть, но в таблице users нет - создаем
-            if (error.code === 'PGRST116') {
-                const { data: authUser } = await db.auth.getUser();
-                if (authUser?.user) {
-                    const { data: newUser } = await db.from('users').insert({
-                        id: authId,
-                        email: authUser.user.email,
-                        username: authUser.user.email?.split('@')[0] || 'user',
-                        display_name: authUser.user.email?.split('@')[0] || 'User',
-                        status: 'online',
-                        has_password: true
-                    }).select().single();
-                    
-                    if (newUser) {
-                        user = newUser;
-                        localStorage.setItem('touchUser', JSON.stringify(newUser));
-                        return;
-                    }
-                }
-            }
-            return;
-        }
-        
-        if (data) {
-            user = data;
-            localStorage.setItem('touchUser', JSON.stringify(data));
-        }
-    } catch (e) {
-        console.error('Критическая ошибка:', e);
+    const { data } = await db.from('users')
+        .select('*')
+        .eq('id', authId)
+        .maybeSingle();
+    
+    if (data) {
+        user = data;
+        localStorage.setItem('touchUser', JSON.stringify(data));
+        return true;
+    }
+    return false;
+}
+
+// Запускаем
+initApp();
+
+// Скрываем сплеш-скрин
+function hideSplash() {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+        splash.classList.add('hide');
+        setTimeout(() => { if (splash.parentNode) splash.remove(); }, 500);
     }
 }
 
-initApp();
+// Если за 3 секунды ничего не произошло - скрываем сплеш принудительно
+setTimeout(hideSplash, 3000);
 
 // ============ МОДАЛКИ ============
 function showModal(id) { document.getElementById(id).classList.add('show'); }
