@@ -415,6 +415,49 @@
             .chats-screen.hidden{transform:translateX(-30%);opacity:.5;pointer-events:none}
             .msg-bubble{max-width:80%}
         }
+
+        /* ПОЛЕ ВВОДА */
+.input-area{
+    padding:10px 16px;
+    background:var(--bg2);
+    border-top:1px solid var(--border);
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+    flex-shrink:0;
+    max-height:120px;
+}
+.input-area textarea{
+    flex:1;
+    padding:10px 14px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:18px;
+    font-family:var(--font);
+    font-size:14px;
+    color:var(--text);
+    outline:none;
+    resize:none;
+    min-height:40px;
+    max-height:100px;
+    line-height:1.4;
+    transition:border-color var(--transition);
+    letter-spacing:-0.01em;
+}
+.input-area textarea::placeholder{color:var(--text3)}
+.input-area textarea:focus{border-color:var(--red)}
+.send-btn{
+    width:40px;height:40px;
+    background:var(--red);
+    color:#fff;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+    font-family:monospace;font-size:16px;
+    margin-bottom:0;
+}
+.send-btn:hover{background:var(--red2)}
+        
     </style>
 </head>
 <body>
@@ -465,10 +508,10 @@
             </div>
             <div class="messages" id="messages"><div class="messages-center">Выберите чат для начала общения</div></div>
             <div class="input-area">
-                <input type="text" id="msgInput" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendMsg()">
-                <button class="send-btn" onclick="sendMsg()">&gt;</button>
-            </div>
-        </div>
+         <div class="input-area">
+    <textarea id="msgInput" placeholder="Сообщение..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea>
+    <button class="send-btn" onclick="sendMsg()">&gt;</button>
+</div>
     </div>
 
     <div class="modal" id="authModal">
@@ -730,14 +773,16 @@
         await db.from('message_reads').upsert(ur.map(m => ({ message_id: m.id, user_id: user.id, read_at: new Date().toISOString() })), { onConflict: 'message_id,user_id', ignoreDuplicates: true });
     }
 
-    async function sendMsg() {
-        if (!chatId) return;
-        const t = document.getElementById('msgInput').value.trim();
-        if (!t) return;
-        document.getElementById('msgInput').value = '';
-        await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
-        await checkNewMessages();
-    }
+ async function sendMsg() {
+    if (!chatId) return;
+    const textarea = document.getElementById('msgInput');
+    const t = textarea.value.trim();
+    if (!t) return;
+    textarea.value = '';
+    textarea.style.height = 'auto';
+    await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
+    await checkNewMessages();
+}
 
     async function createChat() {
         const q = prompt('Введите имя, email или TID:');
@@ -816,6 +861,16 @@
             el.style.display = el.querySelector('.chat-name').textContent.toLowerCase().includes(q) ? 'flex' : 'none';
         });
     });
+        // ============ АВТО-РАСШИРЕНИЕ ПОЛЯ ВВОДА ============
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('msgInput');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+    }
+});
     </script>
 </body>
 </html>
