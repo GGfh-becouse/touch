@@ -533,6 +533,314 @@ input::placeholder{color:var(--text3)}
         <button class="logout-btn" onclick="logout()">Выйти из аккаунта</button>
     </div>
 </div>
+    <script>
+    const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let user = null;
+let chatId = null;
+let isLogin = true;
+let pollTimer = null;
+let chatsPollTimer = null;
+let lastMsgCount = 0;
+
+// ============ СПЛЕШ-СКРИН ============
+function hideSplash() {
+    const splash = document.getElementById('splashScreen');
+    if (splash && !splash.classList.contains('hide')) {
+        splash.classList.add('hide');
+        setTimeout(() => { if (splash.parentNode) splash.remove(); }, 400);
+    }
+}
+
+// ============ ИНИЦИАЛИЗАЦИЯ ============
+const saved = localStorage.getItem('touchUser');
+if (saved) {
+    user = JSON.parse(saved);
+    hideModal('authModal');
+    refreshUI();
+    loadChats();
+    startChatsPolling();
+    setTimeout(hideSplash, 500);
+} else {
+    showModal('authModal');
+    setTimeout(hideSplash, 2000);
+}
+
+// ============ МОДАЛКИ ============
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+document.getElementById('authModal').addEventListener('click', e => { if (e.target.id === 'authModal') hideModal('authModal'); });
+document.getElementById('profileModal').addEventListener('click', e => { if (e.target.id === 'profileModal') hideModal('profileModal'); });
+function openProfile() { refreshUI(); showModal('profileModal'); }
+function closeProfile() { hideModal('profileModal'); }
+
+function refreshUI() {
+    if (!user) return;
+    const n = user.display_name || user.username || '?';
+    document.getElementById('headAva').textContent = n[0].toUpperCase();
+    document.getElementById('profAva').textContent = n[0].toUpperCase();
+    document.getElementById('profName').textContent = n;
+    document.getElementById('profEmail').textContent = user.email || '-';
+    document.getElementById('profTid').textContent = user.tid || '@touch_user';
+    document.getElementById('profDate').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
+}
+
+// ============ АВТОРИЗАЦИЯ ============
+async function doAuth() {
+    const email = document.getElementById('authEmail').value.trim();
+    const username = document.getElementById('authUsername').value.trim();
+    const err = document.getElementById('authError');
+    err.style.display = 'none';
+    if (!email || !username) { err.textContent = 'Заполните все поля'; err.style.display = 'block'; return; }
+    try {
+        if (isLogin) {
+            const { data, error } = await db.from('users').select('*').eq('email', email).eq('username', username).single();
+            if (error || !data) { err.textContent = 'Пользователь не найден'; err.style.display = 'block'; return; }
+            user = data;
+            await db.from('users').update({ status: 'online', last_seen: new Date() }).eq('id', user.id);
+        } else {
+            const { data: ex } = await db.from('users').select('id').or(`email.eq.${email},username.eq.${username}`).maybeSingle();
+            if (ex) { err.textContent = 'Пользователь уже существует'; err.style.display = 'block'; return; }
+            const { data: nu, error } = await db.from('users').insert({ email, username, display_name: username, status: 'online' }).select().single();
+            if (error) throw error;
+            user = nu;
+        }
+        localStorage.setItem('touchUser', JSON.stringify(user));
+        hideModal('authModal');
+        hideSplash();
+        refreshUI();
+        loadChats();
+        startChatsPolling();
+    } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+document.getElementById('authSubmitBtn').addEventListener('click', doAuth);
+document.getElementById('authToggleBtn').addEventListener('click', function() {
+    isLogin = !isLogin;
+    document.getElementById('authTitle').textContent = isLogin ? 'Вход в Touch' : 'Регистрация в Touch';
+    document.getElementById('authSubmitBtn').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
+    this.textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
+});
+
+// ============ АВТООБНОВЛЕНИЕ ЧАТОВ ============
+function startChatsPolling() {
+    if (chatsPollTimer) clearInterval(chatsPollTimer);
+    chatsPollTimer = setInterval(updateChatsBadges, 2000);
+}
+
+async function updateChatsBadges() {
+    if (!user) return;
+    try {
+        const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
+        if (!data) return;
+        for (const item of data) {
+            const { data: count } = await db.rpc('get_unread_count', { chat_id: item.chats.id, user_id: user.id });
+            const unread = count || 0;
+            const badge = document.getElementById('badge-' + item.chats.id);
+            const lastMsg = document.getElementById('last-' + item.chats.id);
+            if (badge) { badge.textContent = unread; badge.style.display = unread > 0 ? 'inline-block' : 'none'; }
+            if (lastMsg) { lastMsg.textContent = unread > 0 ? unread + ' новых' : 'Нет новых'; lastMsg.style.color = unread > 0 ? 'var(--red)' : 'var(--text2)'; lastMsg.style.fontWeight = unread > 0 ? '600' : '400'; }
+        }
+    } catch(e) {}
+}
+
+// ============ ЧАТЫ ============
+async function loadChats() {
+    if (!user) return;
+    const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
+    const list = document.getElementById('chatsList');
+    if (data && data.length) {
+        let html = '';
+        for (const item of data) {
+            const isActive = chatId === item.chats.id;
+            html += `<div class="chat-item${isActive?' active':''}" onclick="openChat('${item.chats.id}','${item.chats.name.replace(/'/g,"\\'")}')"><div class="ava">${(item.chats.name||'?')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-last" id="last-${item.chats.id}">Нет новых</div></div><div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div></div>`;
+        }
+        list.innerHTML = html;
+        updateChatsBadges();
+    } else {
+        list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
+    }
+    hideSplash();
+}
+
+// ============ ОТКРЫТИЕ ЧАТА ============
+async function openChat(id, name) {
+    if (pollTimer) clearInterval(pollTimer);
+    chatId = id; lastMsgCount = 0;
+    document.getElementById('chatTitle').textContent = name;
+    document.getElementById('chatAva').textContent = name[0];
+    await loadMessages();
+    markAsRead(id);
+    updateChatsBadges();
+    pollTimer = setInterval(checkNewMessages, 1000);
+    if (window.innerWidth <= 768) {
+        document.getElementById('chatScreen').classList.add('active');
+        document.getElementById('chatsScreen').classList.add('hidden');
+        document.getElementById('backBtn').style.display = 'flex';
+    }
+}
+
+async function loadMessages() {
+    if (!chatId) return;
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
+    const container = document.getElementById('messages');
+    container.innerHTML = '';
+    if (msgs && msgs.length) { lastMsgCount = msgs.length; for (const m of msgs) appendMessage(m, container); }
+    else { container.innerHTML = '<div class="messages-center">Нет сообщений</div>'; }
+    container.scrollTop = container.scrollHeight;
+}
+
+async function checkNewMessages() {
+    if (!chatId) return;
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
+    if (!msgs || msgs.length <= lastMsgCount) return;
+    const container = document.getElementById('messages');
+    const placeholder = container.querySelector('.messages-center');
+    if (placeholder) placeholder.remove();
+    for (let i = lastMsgCount; i < msgs.length; i++) appendMessage(msgs[i], container);
+    lastMsgCount = msgs.length;
+    container.scrollTop = container.scrollHeight;
+    markAsRead(chatId);
+}
+
+function appendMessage(m, container) {
+    const isOutgoing = m.sender_id === user.id;
+    const isDeleted = m.is_deleted;
+    const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isOutgoing ? 'out' : 'in');
+    div.dataset.msgId = m.id;
+    div.dataset.senderId = m.sender_id;
+    div.innerHTML = `<div class="msg-bubble${isDeleted?' deleted':''}"><p>${isDeleted?'[x] Сообщение удалено':m.content}</p><div class="time">${time}</div></div>`;
+    div.addEventListener('contextmenu', function(e) { e.preventDefault(); if (m.sender_id === user.id) showMessageMenu(e.clientX, e.clientY, m.id); });
+    let longPress;
+    div.addEventListener('touchstart', function(e) { longPress = setTimeout(() => { if (m.sender_id === user.id) showMessageMenu(e.touches[0].clientX, e.touches[0].clientY, m.id); }, 500); });
+    div.addEventListener('touchend', () => clearTimeout(longPress));
+    div.addEventListener('touchmove', () => clearTimeout(longPress));
+    container.appendChild(div);
+}
+
+function showMessageMenu(x, y, msgId) {
+    closeMessageMenu();
+    const menu = document.createElement('div');
+    menu.id = 'msgMenu';
+    menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
+    menu.innerHTML = `<button onclick="deleteMessage('${msgId}')" style="width:100%;padding:8px 14px;text-align:left;font-size:13px;color:var(--red);font-family:monospace">[x] Delete</button><button onclick="closeMessageMenu()" style="width:100%;padding:8px 14px;text-align:left;font-size:12px;color:var(--text2);font-family:monospace">[-] Cancel</button>`;
+    document.body.appendChild(menu);
+    setTimeout(() => { document.addEventListener('click', closeMessageMenu); document.addEventListener('touchstart', closeMessageMenu); }, 100);
+}
+
+function closeMessageMenu() {
+    const menu = document.getElementById('msgMenu');
+    if (menu) menu.remove();
+    document.removeEventListener('click', closeMessageMenu);
+    document.removeEventListener('touchstart', closeMessageMenu);
+}
+
+async function deleteMessage(msgId) {
+    closeMessageMenu();
+    if (!confirm('Delete this message?')) return;
+    await db.from('messages').update({ is_deleted: true, content: '[x] Message deleted' }).eq('id', msgId);
+    const el = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (el) { el.querySelector('.msg-bubble').classList.add('deleted'); el.querySelector('p').textContent = '[x] Message deleted'; }
+}
+
+async function markAsRead(chatId) {
+    if (!user || !chatId) return;
+    const { data: unread } = await db.from('messages').select('id').eq('chat_id', chatId).neq('sender_id', user.id);
+    if (!unread || !unread.length) return;
+    await db.from('message_reads').upsert(unread.map(m => ({ message_id: m.id, user_id: user.id, read_at: new Date().toISOString() })), { onConflict: 'message_id,user_id', ignoreDuplicates: true });
+}
+
+async function sendMsg() {
+    if (!chatId) return;
+    const t = document.getElementById('msgInput').value.trim();
+    if (!t) return;
+    document.getElementById('msgInput').value = '';
+    await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
+    await checkNewMessages();
+}
+
+async function createChat() {
+    const query = prompt('Enter username, nickname, email or TID:');
+    if (!query) return;
+    const { data: found } = await db.from('users').select('*').or(`username.eq.${query},display_name.eq.${query},tid.eq.${query},email.eq.${query}`).maybeSingle();
+    if (!found) { alert('User not found'); return; }
+    if (found.id === user.id) { alert('Cannot chat with yourself'); return; }
+    const confirmed = confirm('User found:\n\nName: ' + (found.display_name || found.username) + '\nUsername: ' + found.username + '\nTID: ' + (found.tid || 'N/A') + '\nRegistered: ' + new Date(found.created_at).toLocaleDateString('ru-RU') + '\n\nCreate chat?');
+    if (!confirmed) return;
+    const { data: newChatId } = await db.rpc('get_or_create_chat', { user1: user.id, user2: found.id, chat_name: (user.display_name || user.username) + ' & ' + (found.display_name || found.username) });
+    loadChats();
+    openChat(newChatId, (user.display_name || user.username) + ' & ' + (found.display_name || found.username));
+}
+
+async function updateDisplayName() {
+    const newName = prompt('Введите новое отображаемое имя:', user.display_name || user.username);
+    if (!newName || newName === user.display_name) return;
+    await db.from('users').update({ display_name: newName }).eq('id', user.id);
+    user.display_name = newName;
+    localStorage.setItem('touchUser', JSON.stringify(user));
+    refreshUI();
+}
+
+async function renameChat() {
+    if (!chatId) return;
+    const nm = prompt('Новое название:', document.getElementById('chatTitle').textContent);
+    if (!nm) return;
+    await db.from('chats').update({ name: nm }).eq('id', chatId);
+    document.getElementById('chatTitle').textContent = nm;
+    document.getElementById('chatAva').textContent = nm[0];
+    loadChats();
+}
+
+async function deleteChat() {
+    if (!chatId) return;
+    if (!confirm('Удалить чат "' + document.getElementById('chatTitle').textContent + '"?')) return;
+    await db.from('messages').delete().eq('chat_id', chatId);
+    await db.from('chat_members').delete().eq('chat_id', chatId);
+    await db.from('chats').delete().eq('id', chatId);
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    chatId = null;
+    document.getElementById('chatTitle').textContent = 'Выберите чат';
+    document.getElementById('chatAva').textContent = '?';
+    document.getElementById('messages').innerHTML = '<div class="messages-center">Чат удален</div>';
+    loadChats();
+    if (window.innerWidth <= 768) goBack();
+}
+
+function goBack() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    chatId = null; lastMsgCount = 0;
+    document.getElementById('chatScreen').classList.remove('active');
+    document.getElementById('chatsScreen').classList.remove('hidden');
+    document.getElementById('backBtn').style.display = 'none';
+    document.getElementById('chatTitle').textContent = 'Выберите чат';
+    document.getElementById('chatAva').textContent = '?';
+    document.getElementById('messages').innerHTML = '<div class="messages-center">Выберите чат для начала общения</div>';
+}
+
+function copyTid() { navigator.clipboard.writeText(document.getElementById('profTid').textContent).then(() => alert('Copied!')); }
+
+function logout() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (chatsPollTimer) { clearInterval(chatsPollTimer); chatsPollTimer = null; }
+    if (user) db.from('users').update({ status: 'offline', last_seen: new Date() }).eq('id', user.id);
+    localStorage.removeItem('touchUser');
+    user = null; chatId = null;
+    hideModal('profileModal'); goBack();
+    document.getElementById('chatsList').innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
+    document.getElementById('headAva').textContent = '?';
+    showModal('authModal');
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.chat-item').forEach(el => {
+        el.style.display = el.querySelector('.chat-name').textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+    });
+});
     </script>
 </body>
 </html>
