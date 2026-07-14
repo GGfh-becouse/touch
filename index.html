@@ -78,7 +78,7 @@
         .input-area{padding:10px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
         .input-area input{flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:14px;transition:border-color .15s}
         .input-area input:focus{border-color:var(--red)}
-        .send-btn{width:38px;height:38px;background:var(--red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;transition:all .15s}
+        .send-btn{width:38px;height:38px;background:var(--red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-family:monospace;transition:all .15s}
         .send-btn:active{background:var(--red2);transform:scale(.95)}
 
         /* МОДАЛКИ */
@@ -93,7 +93,7 @@
         .modal-switch{text-align:center;color:var(--text2);font-size:13px}
         .modal-switch span{color:var(--red);cursor:pointer}
         .modal-error{color:var(--red);font-size:12px;text-align:center;margin-bottom:8px;display:none}
-        .modal-close{position:absolute;top:8px;right:12px;font-size:22px;color:var(--text2);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+        .modal-close{position:absolute;top:8px;right:12px;font-size:22px;color:var(--text2);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:monospace}
         .modal-close:active{background:var(--card)}
         .prof-ava{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:28px;color:#fff;margin:0 auto 12px}
         .prof-tid{background:var(--bg);border-radius:10px;padding:8px 12px;margin:10px 0;font-size:13px;text-align:center}
@@ -120,36 +120,39 @@
             .chat-screen.active{transform:translateX(0)}
             .chats-screen.hidden{transform:translateX(-30%);opacity:.5;pointer-events:none}
         }
-        .unread-badge {
-    background: var(--red);
-    color: #fff;
-    border-radius: 12px;
-    padding: 2px 7px;
-    font-size: 11px;
-    font-weight: 700;
-    flex-shrink: 0;
-    min-width: 20px;
-    text-align: center;
-    line-height: 1.4;
-}
-        .msg-bubble.deleted {
-    opacity: 0.5;
-    font-style: italic;
-    background: var(--card) !important;
-    color: var(--text2) !important;
-}
-        @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
+
+        /* БЕЙДЖИ */
+        .unread-badge{background:var(--red);color:#fff;border-radius:12px;padding:2px 7px;font-size:11px;font-weight:700;flex-shrink:0;min-width:20px;text-align:center;line-height:1.4}
+        .msg-bubble.deleted{opacity:0.5;font-style:italic;background:var(--card)!important;color:var(--text2)!important}
+        @keyframes fadeIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+
+        /* СПЛЕШ-СКРИН */
+        .splash-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease}
+        .splash-screen.hide{opacity:0;pointer-events:none}
+        .splash-logo{width:80px;height:80px;border-radius:20px;margin-bottom:20px;animation:pulse 2s infinite}
+        .splash-title{font-family:var(--head);font-size:28px;font-weight:700;margin-bottom:8px}
+        .splash-subtitle{font-size:14px;color:var(--text2);margin-bottom:40px}
+        .splash-fact{font-size:13px;color:var(--text2);text-align:center;max-width:280px;line-height:1.5;min-height:40px}
+        .splash-spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin-top:20px}
+        @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
     </style>
 </head>
 <body>
+    <!-- ПРИВЕТСТВЕННЫЙ ЭКРАН -->
+    <div class="splash-screen" id="splashScreen">
+        <img src="you_know.png" alt="Touch" class="splash-logo">
+        <div class="splash-title">TOUCH</div>
+        <div class="splash-subtitle">powered by Zmee</div>
+        <div class="splash-fact" id="splashFact">Загрузка...</div>
+        <div class="splash-spinner"></div>
+    </div>
+
     <!-- ХЕДЕР -->
     <header class="header">
         <div class="header-left">
             <button class="back-btn" id="backBtn" onclick="goBack()">←</button>
-            <img src="you_know.png" alt="Logo" style="width:28px; height:28px; border-radius:6px;">
+            <img src="you_know.png" alt="Logo" style="width:28px;height:28px;border-radius:6px">
             <span class="logo-text">Touch (powered by Zmee)</span>
         </div>
         <div class="header-right">
@@ -159,7 +162,6 @@
 
     <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
     <div class="app">
-        <!-- ЭКРАН ЧАТОВ -->
         <div class="chats-screen" id="chatsScreen">
             <div class="search-wrap">
                 <div class="search-box">
@@ -171,7 +173,6 @@
             <div class="chats-list" id="chatsList"></div>
         </div>
 
-        <!-- ЭКРАН СООБЩЕНИЙ -->
         <div class="chat-screen" id="chatScreen">
             <div class="chat-header">
                 <div class="chat-header-info">
@@ -182,14 +183,14 @@
                     </div>
                 </div>
                 <div class="chat-actions">
-                    <button class="hbtn" onclick="renameChat()" title="Переименовать">Edit</button>
-                    <button class="hbtn" onclick="deleteChat()" title="Удалить чат" style="color:var(--red)">Del</button>
+                    <button class="hbtn" onclick="renameChat()" title="Переименовать" style="font-family:monospace">/</button>
+                    <button class="hbtn" onclick="deleteChat()" title="Удалить чат" style="color:var(--red);font-family:monospace">x</button>
                 </div>
             </div>
             <div class="messages" id="messages"><div class="messages-center">Выберите чат для начала общения</div></div>
             <div class="input-area">
                 <input type="text" id="msgInput" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendMsg()">
-                <button class="send-btn" onclick="sendMsg()">➤</button>
+                <button class="send-btn" onclick="sendMsg()">&gt;</button>
             </div>
         </div>
     </div>
@@ -209,10 +210,10 @@
     <!-- МОДАЛКА ПРОФИЛЯ -->
     <div class="modal" id="profileModal">
         <div class="modal-content" style="text-align:center">
-            <span class="modal-close" onclick="closeProfile()">×</span>
+            <span class="modal-close" onclick="closeProfile()">[x]</span>
             <div class="prof-ava" id="profAva">U</div>
             <h2 id="profName" style="font-family:var(--head);cursor:pointer" onclick="updateDisplayName()" title="Нажмите чтобы изменить имя">Пользователь</h2>
-            <div class="prof-tid">TID: <span id="profTid" style="color:var(--red);font-weight:600">@touch_user</span> <button onclick="copyTid()" style="color:var(--text2)">📋</button></div>
+            <div class="prof-tid">TID: <span id="profTid" style="color:var(--red);font-weight:600">@touch_user</span> <button onclick="copyTid()" style="color:var(--text2);font-family:monospace;font-size:12px">[ ]</button></div>
             <div class="prof-row"><span class="lbl">Email</span><span id="profEmail">-</span></div>
             <div class="prof-row"><span class="lbl">Регистрация</span><span id="profDate">-</span></div>
             <button class="logout-btn" onclick="logout()">Выйти из аккаунта</button>
@@ -220,12 +221,10 @@
     </div>
 
     <script>
-        // ============ КОНФИГ ============
         const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ============ СОСТОЯНИЕ ============
         let user = null;
         let chatId = null;
         let isLogin = true;
@@ -233,7 +232,6 @@
         let chatsPollTimer = null;
         let lastMsgCount = 0;
 
-        // ============ ИНИЦИАЛИЗАЦИЯ ============
         const saved = localStorage.getItem('touchUser');
         if (saved) {
             user = JSON.parse(saved);
@@ -245,7 +243,6 @@
             showModal('authModal');
         }
 
-        // ============ МОДАЛКИ ============
         function showModal(id) { document.getElementById(id).classList.add('show'); }
         function hideModal(id) { document.getElementById(id).classList.remove('show'); }
         document.getElementById('authModal').addEventListener('click', e => { if (e.target.id === 'authModal') hideModal('authModal'); });
@@ -253,7 +250,6 @@
         function openProfile() { refreshUI(); showModal('profileModal'); }
         function closeProfile() { hideModal('profileModal'); }
 
-        // ============ UI ============
         function refreshUI() {
             if (!user) return;
             const n = user.display_name || user.username || '?';
@@ -265,7 +261,6 @@
             document.getElementById('profDate').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : 'Сегодня';
         }
 
-        // ============ ОБНОВЛЕНИЕ ОТОБРАЖАЕМОГО ИМЕНИ ============
         async function updateDisplayName() {
             const newName = prompt('Введите новое отображаемое имя:', user.display_name || user.username);
             if (!newName || newName === user.display_name) return;
@@ -274,10 +269,9 @@
             user.display_name = newName;
             localStorage.setItem('touchUser', JSON.stringify(user));
             refreshUI();
-            alert('✅ Имя изменено на: ' + newName);
+            alert('[OK] Имя изменено на: ' + newName);
         }
 
-        // ============ АВТОРИЗАЦИЯ ============
         async function doAuth() {
             const email = document.getElementById('authEmail').value.trim();
             const username = document.getElementById('authUsername').value.trim();
@@ -313,7 +307,6 @@
             this.textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
         });
 
-        // ============ АВТООБНОВЛЕНИЕ ЧАТОВ ============
         function startChatsPolling() {
             if (chatsPollTimer) clearInterval(chatsPollTimer);
             chatsPollTimer = setInterval(updateChatsBadges, 2000);
@@ -329,20 +322,12 @@
                     const unread = count || 0;
                     const badge = document.getElementById('badge-' + item.chats.id);
                     const lastMsg = document.getElementById('last-' + item.chats.id);
-                    if (badge) {
-                        badge.textContent = unread;
-                        badge.style.display = unread > 0 ? 'inline-block' : 'none';
-                    }
-                    if (lastMsg) {
-                        lastMsg.textContent = unread > 0 ? unread + ' новых' : 'Нет новых';
-                        lastMsg.style.color = unread > 0 ? 'var(--red)' : 'var(--text2)';
-                        lastMsg.style.fontWeight = unread > 0 ? '600' : '400';
-                    }
+                    if (badge) { badge.textContent = unread; badge.style.display = unread > 0 ? 'inline-block' : 'none'; }
+                    if (lastMsg) { lastMsg.textContent = unread > 0 ? unread + ' новых' : 'Нет новых'; lastMsg.style.color = unread > 0 ? 'var(--red)' : 'var(--text2)'; lastMsg.style.fontWeight = unread > 0 ? '600' : '400'; }
                 }
             } catch(e) {}
         }
 
-        // ============ ЧАТЫ ============
         async function loadChats() {
             if (!user) return;
             const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
@@ -351,15 +336,7 @@
                 let html = '';
                 for (const item of data) {
                     const isActive = chatId === item.chats.id;
-                    html += `
-                        <div class="chat-item${isActive ? ' active' : ''}" onclick="openChat('${item.chats.id}', '${item.chats.name.replace(/'/g, "\\'")}')">
-                            <div class="ava">${(item.chats.name || '?')[0]}</div>
-                            <div class="chat-info">
-                                <div class="chat-name">${item.chats.name}</div>
-                                <div class="chat-last" id="last-${item.chats.id}">Нет новых</div>
-                            </div>
-                            <div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div>
-                        </div>`;
+                    html += `<div class="chat-item${isActive?' active':''}" onclick="openChat('${item.chats.id}','${item.chats.name.replace(/'/g,"\\'")}')"><div class="ava">${(item.chats.name||'?')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-last" id="last-${item.chats.id}">Нет новых</div></div><div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div></div>`;
                 }
                 list.innerHTML = html;
                 updateChatsBadges();
@@ -368,11 +345,9 @@
             }
         }
 
-        // ============ ОТКРЫТИЕ ЧАТА ============
         async function openChat(id, name) {
             if (pollTimer) clearInterval(pollTimer);
-            chatId = id;
-            lastMsgCount = 0;
+            chatId = id; lastMsgCount = 0;
             document.getElementById('chatTitle').textContent = name;
             document.getElementById('chatAva').textContent = name[0];
             await loadMessages();
@@ -391,16 +366,11 @@
             const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
             const container = document.getElementById('messages');
             container.innerHTML = '';
-            if (msgs && msgs.length) {
-                lastMsgCount = msgs.length;
-                for (const m of msgs) appendMessage(m, container);
-            } else {
-                container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
-            }
+            if (msgs && msgs.length) { lastMsgCount = msgs.length; for (const m of msgs) appendMessage(m, container); }
+            else { container.innerHTML = '<div class="messages-center">Нет сообщений</div>'; }
             container.scrollTop = container.scrollHeight;
         }
 
-        // ============ ПРОВЕРКА НОВЫХ СООБЩЕНИЙ ============
         async function checkNewMessages() {
             if (!chatId) return;
             const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
@@ -414,7 +384,6 @@
             markAsRead(chatId);
         }
 
-        // ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ ============
         function appendMessage(m, container) {
             const isOutgoing = m.sender_id === user.id;
             const isDeleted = m.is_deleted;
@@ -423,7 +392,7 @@
             div.className = 'msg ' + (isOutgoing ? 'out' : 'in');
             div.dataset.msgId = m.id;
             div.dataset.senderId = m.sender_id;
-            div.innerHTML = `<div class="msg-bubble${isDeleted ? ' deleted' : ''}"><p>${isDeleted ? '🗑️ Сообщение удалено' : m.content}</p><div class="time">${time}</div></div>`;
+            div.innerHTML = `<div class="msg-bubble${isDeleted?' deleted':''}"><p>${isDeleted?'[x] Сообщение удалено':m.content}</p><div class="time">${time}</div></div>`;
             div.addEventListener('contextmenu', function(e) { e.preventDefault(); if (m.sender_id === user.id) showMessageMenu(e.clientX, e.clientY, m.id); });
             let longPress;
             div.addEventListener('touchstart', function(e) { longPress = setTimeout(() => { if (m.sender_id === user.id) showMessageMenu(e.touches[0].clientX, e.touches[0].clientY, m.id); }, 500); });
@@ -436,8 +405,8 @@
             closeMessageMenu();
             const menu = document.createElement('div');
             menu.id = 'msgMenu';
-            menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:8px 0;z-index:300;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);`;
-            menu.innerHTML = `<button onclick="deleteMessage('${msgId}')" style="width:100%;padding:10px 16px;text-align:left;font-size:14px;color:var(--red);display:flex;align-items:center;gap:8px">🗑️ Удалить</button><button onclick="closeMessageMenu()" style="width:100%;padding:10px 16px;text-align:left;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px">✖ Отмена</button>`;
+            menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
+            menu.innerHTML = `<button onclick="deleteMessage('${msgId}')" style="width:100%;padding:8px 14px;text-align:left;font-size:13px;color:var(--red);font-family:monospace">[x] Delete</button><button onclick="closeMessageMenu()" style="width:100%;padding:8px 14px;text-align:left;font-size:12px;color:var(--text2);font-family:monospace">[-] Cancel</button>`;
             document.body.appendChild(menu);
             setTimeout(() => { document.addEventListener('click', closeMessageMenu); document.addEventListener('touchstart', closeMessageMenu); }, 100);
         }
@@ -451,11 +420,11 @@
 
         async function deleteMessage(msgId) {
             closeMessageMenu();
-            if (!confirm('Удалить сообщение?')) return;
-            const { error } = await db.from('messages').update({ is_deleted: true, content: '🗑️ Сообщение удалено' }).eq('id', msgId);
-            if (error) { alert('Ошибка: ' + error.message); return; }
+            if (!confirm('Delete this message?')) return;
+            const { error } = await db.from('messages').update({ is_deleted: true, content: '[x] Message deleted' }).eq('id', msgId);
+            if (error) { alert('Error: ' + error.message); return; }
             const el = document.querySelector(`[data-msg-id="${msgId}"]`);
-            if (el) { el.querySelector('.msg-bubble').classList.add('deleted'); el.querySelector('p').textContent = '🗑️ Сообщение удалено'; }
+            if (el) { el.querySelector('.msg-bubble').classList.add('deleted'); el.querySelector('p').textContent = '[x] Message deleted'; }
         }
 
         async function markAsRead(chatId) {
@@ -475,16 +444,16 @@
         }
 
         async function createChat() {
-            const query = prompt('Введите имя пользователя, ник, email или TID:');
+            const query = prompt('Enter username, nickname, email or TID:');
             if (!query) return;
             const { data: found } = await db.from('users').select('*').or(`username.eq.${query},display_name.eq.${query},tid.eq.${query},email.eq.${query}`).maybeSingle();
-            if (!found) { alert('Пользователь не найден'); return; }
-            if (found.id === user.id) { alert('Нельзя создать чат с собой'); return; }
-            const confirmed = confirm(`👤 Имя: ${found.display_name || found.username}\n📧 Username: ${found.username}\n🆔 TID: ${found.tid}\n📅 Регистрация: ${new Date(found.created_at).toLocaleDateString('ru-RU')}\n\nСоздать чат?`);
+            if (!found) { alert('User not found'); return; }
+            if (found.id === user.id) { alert('Cannot chat with yourself'); return; }
+            const confirmed = confirm('User found:\n\nName: ' + (found.display_name || found.username) + '\nUsername: ' + found.username + '\nTID: ' + (found.tid || 'N/A') + '\nRegistered: ' + new Date(found.created_at).toLocaleDateString('ru-RU') + '\n\nCreate chat?');
             if (!confirmed) return;
-            const { data: chatId } = await db.rpc('get_or_create_chat', { user1: user.id, user2: found.id, chat_name: (user.display_name || user.username) + ' & ' + (found.display_name || found.username) });
+            const { data: newChatId } = await db.rpc('get_or_create_chat', { user1: user.id, user2: found.id, chat_name: (user.display_name || user.username) + ' & ' + (found.display_name || found.username) });
             loadChats();
-            openChat(chatId, (user.display_name || user.username) + ' & ' + (found.display_name || found.username));
+            openChat(newChatId, (user.display_name || user.username) + ' & ' + (found.display_name || found.username));
         }
 
         async function renameChat() {
@@ -543,6 +512,35 @@
                 el.style.display = el.querySelector('.chat-name').textContent.toLowerCase().includes(q) ? 'flex' : 'none';
             });
         });
+
+        // ============ СПЛЕШ-СКРИН ============
+        const facts = [
+            "Touch Messenger использует Supabase для хранения данных",
+            "Сообщения обновляются каждую секунду",
+            "Вы можете удалять сообщения долгим нажатием",
+            "TID — это ваш уникальный идентификатор",
+            "Первый мессенджер появился в 1971 году",
+            "Touch написан на чистом JavaScript",
+            "Шрифт Inter разработан специально для интерфейсов",
+            "Цвет #E53935 — фирменный красный Touch",
+            "Вы можете менять отображаемое имя в профиле",
+            "Чат можно переименовать в любой момент"
+        ];
+
+        function getRandomFact() { return facts[Math.floor(Math.random() * facts.length)]; }
+        function updateFact() { const el = document.getElementById('splashFact'); if (el) el.textContent = getRandomFact(); }
+
+        let factInterval = setInterval(updateFact, 3000);
+        updateFact();
+
+        const originalLoadChats = loadChats;
+        loadChats = async function() {
+            await originalLoadChats();
+            setTimeout(() => {
+                const splash = document.getElementById('splashScreen');
+                if (splash) { splash.classList.add('hide'); clearInterval(factInterval); setTimeout(() => splash.remove(), 500); }
+            }, 500);
+        };
     </script>
 </body>
 </html>
