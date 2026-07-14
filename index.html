@@ -509,38 +509,8 @@ input::placeholder{color:var(--text3)}
             </div>
         </div>
     </div>
-
-    <!-- МОДАЛКА ВХОДА -->
-    <div class="modal" id="authModal">
-        <div class="modal-content">
-    <h2 id="authTitle">Вход в Touch></h2>
-    <div class="modal-error" id="authError"></div>
-    <input type="email" class="modal-input" id="authEmail" placeholder="Email, или желательно @touch.com">
-    <input type="password" class="modal-input" id="authPassword" placeholder="Пароль">
-    <input type="text" class="modal-input" id="authUsername" placeholder="Имя пользователя" style="display:none">
-    <button class="modal-btn" id="authSubmitBtn">Войти</button>
-    <p class="modal-switch"><span id="authToggleBtn">Нет аккаунта? Зарегистрироваться</span></p>
-</div>
-</div>
-
-    <!-- МОДАЛКА ПРОФИЛЯ -->
-    <div class="modal" id="profileModal">
-        <div class="modal-content" style="text-align:center">
-            <span class="modal-close" onclick="closeProfile()">[x]</span>
-            <div class="prof-ava" id="profAva">U</div>
-            <h2 id="profName" style="font-family:var(--head);cursor:pointer" onclick="updateDisplayName()" title="Нажмите чтобы изменить имя">Пользователь</h2>
-            <div class="prof-tid">TID: <span id="profTid" style="color:var(--red);font-weight:600">@touch_user</span> <button onclick="copyTid()" style="color:var(--text2);font-family:monospace;font-size:12px">[ ]</button></div>
-            <div class="prof-row"><span class="lbl">Email</span><span id="profEmail">-</span></div>
-            <div class="prof-row"><span class="lbl">Регистрация</span><span id="profDate">-</span></div>
-            <button class="logout-btn" onclick="logout()">Выйти из аккаунта</button>
-            <div class="prof-row">
-    <span class="lbl">Пароль</span>
-    <span id="passwordStatus" style="cursor:pointer;font-size:12px" onclick="setPassword()">[!] Не установлен</span>
-</div>
-    </div>
-
-    <script>
-    <div class="modal" id="authModal">
+<!-- МОДАЛКА ВХОДА -->
+<div class="modal" id="authModal">
     <div class="modal-content">
         <h2 id="authTitle">Вход в Touch</h2>
         <div class="modal-error" id="authError"></div>
@@ -548,6 +518,19 @@ input::placeholder{color:var(--text3)}
         <input type="text" class="modal-input" id="authUsername" placeholder="Имя пользователя">
         <button class="modal-btn" id="authSubmitBtn">Войти</button>
         <p class="modal-switch"><span id="authToggleBtn">Нет аккаунта? Зарегистрироваться</span></p>
+    </div>
+</div>
+
+<!-- МОДАЛКА ПРОФИЛЯ -->
+<div class="modal" id="profileModal">
+    <div class="modal-content" style="text-align:center">
+        <span class="modal-close" onclick="closeProfile()">[x]</span>
+        <div class="prof-ava" id="profAva">U</div>
+        <h2 id="profName" style="font-family:var(--head);cursor:pointer" onclick="updateDisplayName()" title="Нажмите чтобы изменить имя">Пользователь</h2>
+        <div class="prof-tid">TID: <span id="profTid" style="color:var(--red);font-weight:600">@touch_user</span> <button onclick="copyTid()" style="color:var(--text2);font-family:monospace;font-size:12px">[ ]</button></div>
+        <div class="prof-row"><span class="lbl">Email</span><span id="profEmail">-</span></div>
+        <div class="prof-row"><span class="lbl">Регистрация</span><span id="profDate">-</span></div>
+        <button class="logout-btn" onclick="logout()">Выйти из аккаунта</button>
     </div>
 </div>
     </script>
