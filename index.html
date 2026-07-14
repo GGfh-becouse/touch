@@ -328,22 +328,24 @@
             } catch(e) {}
         }
 
-        async function loadChats() {
-            if (!user) return;
-            const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
-            const list = document.getElementById('chatsList');
-            if (data && data.length) {
-                let html = '';
-                for (const item of data) {
-                    const isActive = chatId === item.chats.id;
-                    html += `<div class="chat-item${isActive?' active':''}" onclick="openChat('${item.chats.id}','${item.chats.name.replace(/'/g,"\\'")}')"><div class="ava">${(item.chats.name||'?')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-last" id="last-${item.chats.id}">Нет новых</div></div><div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div></div>`;
-                }
-                list.innerHTML = html;
-                updateChatsBadges();
-            } else {
-                list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
-            }
+async function loadChats() {
+    if (!user) return;
+    const { data } = await db.from('chat_members').select('chat_id, chats(id, name)').eq('user_id', user.id);
+    const list = document.getElementById('chatsList');
+    if (data && data.length) {
+        let html = '';
+        for (const item of data) {
+            const isActive = chatId === item.chats.id;
+            html += `<div class="chat-item${isActive?' active':''}" onclick="openChat('${item.chats.id}','${item.chats.name.replace(/'/g,"\\'")}')"><div class="ava">${(item.chats.name||'?')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-last" id="last-${item.chats.id}">Нет новых</div></div><div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div></div>`;
         }
+        list.innerHTML = html;
+        updateChatsBadges();
+        hideSplash(); // Скрываем сплеш после загрузки чатов
+    } else {
+        list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
+        hideSplash(); // Скрываем даже если чатов нет
+    }
+}
 
         async function openChat(id, name) {
             if (pollTimer) clearInterval(pollTimer);
@@ -513,34 +515,42 @@
             });
         });
 
-        // ============ СПЛЕШ-СКРИН ============
-        const facts = [
-            "Touch Messenger использует Supabase для хранения данных",
-            "Сообщения обновляются каждую секунду",
-            "Вы можете удалять сообщения долгим нажатием",
-            "TID — это ваш уникальный идентификатор",
-            "Первый мессенджер появился в 1971 году",
-            "Touch написан на чистом JavaScript",
-            "Шрифт Inter разработан специально для интерфейсов",
-            "Цвет #E53935 — фирменный красный Touch",
-            "Вы можете менять отображаемое имя в профиле",
-            "Чат можно переименовать в любой момент"
-        ];
+       // ============ СПЛЕШ-СКРИН ============
+const facts = [
+    "Touch Messenger использует Supabase для хранения данных",
+    "Сообщения обновляются каждую секунду",
+    "Вы можете удалять сообщения долгим нажатием",
+    "TID — это ваш уникальный идентификатор",
+    "Первый мессенджер появился в 1971 году",
+    "Touch написан на чистом JavaScript",
+    "Шрифт Inter разработан специально для интерфейсов",
+    "Цвет #E53935 — фирменный красный Touch",
+    "Вы можете менять отображаемое имя в профиле",
+    "Чат можно переименовать в любой момент"
+];
 
-        function getRandomFact() { return facts[Math.floor(Math.random() * facts.length)]; }
-        function updateFact() { const el = document.getElementById('splashFact'); if (el) el.textContent = getRandomFact(); }
+function getRandomFact() { return facts[Math.floor(Math.random() * facts.length)]; }
+function updateFact() { const el = document.getElementById('splashFact'); if (el) el.textContent = getRandomFact(); }
 
-        let factInterval = setInterval(updateFact, 3000);
-        updateFact();
+let factInterval = setInterval(updateFact, 3000);
+updateFact();
 
-        const originalLoadChats = loadChats;
-        loadChats = async function() {
-            await originalLoadChats();
-            setTimeout(() => {
-                const splash = document.getElementById('splashScreen');
-                if (splash) { splash.classList.add('hide'); clearInterval(factInterval); setTimeout(() => splash.remove(), 500); }
-            }, 500);
-        };
+// Скрываем сплеш-скрин через 2 секунды или после загрузки
+function hideSplash() {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+        splash.classList.add('hide');
+        clearInterval(factInterval);
+        setTimeout(() => { if (splash.parentNode) splash.remove(); }, 500);
+    }
+}
+
+// Если пользователь уже залогинен - скрываем быстрее
+if (user) {
+    setTimeout(hideSplash, 1000);
+} else {
+    setTimeout(hideSplash, 2500);
+}
     </script>
 </body>
 </html>
