@@ -251,10 +251,43 @@ async function initApp() {
 }
 
 async function loadUserProfile(authId) {
-    const { data } = await db.from('users').select('*').eq('id', authId).single();
-    if (data) {
-        user = data;
-        localStorage.setItem('touchUser', JSON.stringify(data));
+    try {
+        const { data, error } = await db.from('users')
+            .select('*')
+            .eq('id', authId)
+            .maybeSingle();
+        
+        if (error) {
+            console.error('Ошибка загрузки профиля:', error);
+            // Если пользователь в auth есть, но в таблице users нет - создаем
+            if (error.code === 'PGRST116') {
+                const { data: authUser } = await db.auth.getUser();
+                if (authUser?.user) {
+                    const { data: newUser } = await db.from('users').insert({
+                        id: authId,
+                        email: authUser.user.email,
+                        username: authUser.user.email?.split('@')[0] || 'user',
+                        display_name: authUser.user.email?.split('@')[0] || 'User',
+                        status: 'online',
+                        has_password: true
+                    }).select().single();
+                    
+                    if (newUser) {
+                        user = newUser;
+                        localStorage.setItem('touchUser', JSON.stringify(newUser));
+                        return;
+                    }
+                }
+            }
+            return;
+        }
+        
+        if (data) {
+            user = data;
+            localStorage.setItem('touchUser', JSON.stringify(data));
+        }
+    } catch (e) {
+        console.error('Критическая ошибка:', e);
     }
 }
 
