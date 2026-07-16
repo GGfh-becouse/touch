@@ -260,7 +260,12 @@
             font-family:monospace;font-size:16px;
         }
         .send-btn:hover{background:var(--red2)}
-
+.msg-status {
+    font-size: 9px;
+    text-align: right;
+    margin-top: 2px;
+    font-family: monospace;
+}
         /* МОДАЛКИ */
         .modal{
             display:none;
@@ -713,17 +718,29 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    async function checkNewMessages() {
-        if (!chatId) return;
-        const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
-        if (!msgs || msgs.length <= lastMsgCount) return;
-        const container = document.getElementById('messages');
-        if (container.querySelector('.messages-center')) container.innerHTML = '';
-        for (let i = lastMsgCount; i < msgs.length; i++) appendMessage(msgs[i], container);
+async function checkNewMessages() {
+    if (!chatId) return;
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
+    if (!msgs || msgs.length <= lastMsgCount) return;
+    
+    const container = document.getElementById('messages');
+    
+    // Удаляем временные сообщения (отправляющиеся)
+    const tempMsgs = container.querySelectorAll('.msg[data-msg-id^="temp_"]');
+    tempMsgs.forEach(el => el.remove());
+    
+    // Добавляем все сообщения заново
+    container.innerHTML = '';
+    if (msgs && msgs.length) {
         lastMsgCount = msgs.length;
-        container.scrollTop = container.scrollHeight;
-        markAsRead(chatId);
+        for (const m of msgs) appendMessage(m, container);
+    } else {
+        container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
     }
+    
+    container.scrollTop = container.scrollHeight;
+    markAsRead(chatId);
+}
 
     function appendMessage(m, container) {
         const isOut = m.sender_id === user.id;
@@ -773,15 +790,90 @@
         await db.from('message_reads').upsert(ur.map(m => ({ message_id: m.id, user_id: user.id, read_at: new Date().toISOString() })), { onConflict: 'message_id,user_id', ignoreDuplicates: true });
     }
 
- async function sendMsg() {
+// ============ ОТПРАВКА С СТАТУСОМ ============
+async function sendMsg() {
     if (!chatId) return;
     const textarea = document.getElementById('msgInput');
     const t = textarea.value.trim();
     if (!t) return;
+    
+    // Очищаем поле
     textarea.value = '';
     textarea.style.height = 'auto';
-    await db.from('messages').insert({ chat_id: chatId, sender_id: user.id, content: t });
-    await checkNewMessages();
+    
+    // Создаем временное сообщение
+    const tempId = 'temp_' + Date.now();
+    const tempMsg = {
+        id: tempId,
+        content: t,
+        sender_id: user.id,
+        created_at: new Date().toISOString(),
+        is_deleted: false,
+        sending: true
+    };
+    
+    // Добавляем на экран
+    const container = document.getElementById('messages');
+    const placeholder = container.querySelector('.messages-center');
+    if (placeholder) placeholder.remove();
+    appendMessage(tempMsg, container, true);
+    container.scrollTop = container.scrollHeight;
+    
+    // Отправляем в БД
+    const { error } = await db.from('messages').insert({
+        chat_id: chatId,
+        sender_id: user.id,
+        content: t
+    });
+    
+    if (error) {
+        // Ошибка - отмечаем сообщение
+        const el = document.querySelector(`[data-msg-id="${tempId}"]`);
+        if (el) {
+            el.querySelector('.msg-status').textContent = '[x] Ошибка';
+            el.querySelector('.msg-status').style.color = 'var(--red)';
+            el.querySelector('.msg-bubble').style.opacity = '0.6';
+        }
+        console.error('Ошибка отправки:', error);
+    } else {
+        // Успешно - обновляем через проверку
+        await checkNewMessages();
+    }
+}
+
+// ============ ОБНОВЛЕННАЯ ФУНКЦИЯ ДОБАВЛЕНИЯ СООБЩЕНИЯ ============
+function appendMessage(m, container, isTemp = false) {
+    const isOut = m.sender_id === user.id;
+    const isDel = m.is_deleted;
+    const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isOut ? 'out' : 'in');
+    div.dataset.msgId = m.id;
+    
+    if (isDel) {
+        div.innerHTML = `<div class="msg-bubble deleted"><p>[x] Удалено</p><div class="time">${time}</div></div>`;
+    } else if (m.sending) {
+        div.innerHTML = `
+            <div class="msg-bubble" style="opacity:0.8">
+                <p>${m.content}</p>
+                <div class="msg-status" style="font-size:9px;color:var(--text3);text-align:right;margin-top:2px;">[~] Отправляется...</div>
+                <div class="time">${time}</div>
+            </div>`;
+    } else {
+        div.innerHTML = `<div class="msg-bubble"><p>${m.content}</p><div class="time">${time}</div></div>`;
+    }
+    
+    // Контекстное меню только для отправленных
+    if (!isTemp && !isDel) {
+        div.addEventListener('contextmenu', e => { e.preventDefault(); if (m.sender_id === user.id) showMsgMenu(e.clientX, e.clientY, m.id); });
+        let lp;
+        div.addEventListener('touchstart', e => { lp = setTimeout(() => { if (m.sender_id === user.id) showMsgMenu(e.touches[0].clientX, e.touches[0].clientY, m.id); }, 500); });
+        div.addEventListener('touchend', () => clearTimeout(lp));
+        div.addEventListener('touchmove', () => clearTimeout(lp));
+    }
+    
+    container.appendChild(div);
 }
 
     async function createChat() {
