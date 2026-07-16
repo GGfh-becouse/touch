@@ -266,6 +266,24 @@
     margin-top: 2px;
     font-family: monospace;
 }
+        /* РАЗДЕЛИТЕЛЬ ДАТЫ */
+.msg-date-separator {
+    text-align: center;
+    margin: 16px 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.msg-date-separator span {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 12px;
+    letter-spacing: 0;
+}
         /* МОДАЛКИ */
         .modal{
             display:none;
@@ -708,15 +726,19 @@
         }
     }
 
-    async function loadMessages() {
-        if (!chatId) return;
-        const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
-        const container = document.getElementById('messages');
-        container.innerHTML = '';
-        if (msgs && msgs.length) { lastMsgCount = msgs.length; for (const m of msgs) appendMessage(m, container); }
-        else { container.innerHTML = '<div class="messages-center">Нет сообщений</div>'; }
-        container.scrollTop = container.scrollHeight;
+async function loadMessages() {
+    if (!chatId) return;
+    lastMessageDate = null; // Сбрасываем дату при открытии чата
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
+    const container = document.getElementById('messages');
+    container.innerHTML = '';
+    if (msgs && msgs.length) { 
+        lastMsgCount = msgs.length; 
+        for (const m of msgs) appendMessage(m, container); 
     }
+    else { container.innerHTML = '<div class="messages-center">Нет сообщений</div>'; }
+    container.scrollTop = container.scrollHeight;
+}
 
 async function checkNewMessages() {
     if (!chatId) return;
@@ -724,40 +746,90 @@ async function checkNewMessages() {
     if (!msgs || msgs.length <= lastMsgCount) return;
     
     const container = document.getElementById('messages');
+    const placeholder = container.querySelector('.messages-center');
+    if (placeholder) placeholder.remove();
     
-    // Удаляем временные сообщения (отправляющиеся)
+    // Удаляем временные сообщения
     const tempMsgs = container.querySelectorAll('.msg[data-msg-id^="temp_"]');
     tempMsgs.forEach(el => el.remove());
     
-    // Добавляем все сообщения заново
-    container.innerHTML = '';
-    if (msgs && msgs.length) {
-        lastMsgCount = msgs.length;
-        for (const m of msgs) appendMessage(m, container);
-    } else {
-        container.innerHTML = '<div class="messages-center">Нет сообщений</div>';
+    // Добавляем только новые сообщения
+    for (let i = lastMsgCount; i < msgs.length; i++) {
+        appendMessage(msgs[i], container);
     }
     
+    lastMsgCount = msgs.length;
     container.scrollTop = container.scrollHeight;
     markAsRead(chatId);
 }
 
-    function appendMessage(m, container) {
-        const isOut = m.sender_id === user.id;
-        const isDel = m.is_deleted;
-        const time = new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        const div = document.createElement('div');
-        div.className = 'msg ' + (isOut ? 'out' : 'in');
-        div.dataset.msgId = m.id;
-        div.innerHTML = `<div class="msg-bubble${isDel?' deleted':''}"><p>${isDel?'[x] Удалено':m.content}</p><div class="time">${time}</div></div>`;
+// ============ ДОБАВЛЕНИЕ СООБЩЕНИЯ С ДАТАМИ ============
+let lastMessageDate = null;
+
+function appendMessage(m, container, isTemp = false) {
+    const isOut = m.sender_id === user.id;
+    const isDel = m.is_deleted;
+    const msgDate = new Date(m.created_at);
+    const time = msgDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    
+    // Проверяем, нужен ли разделитель даты
+    const dateString = getDateString(msgDate);
+    if (dateString !== lastMessageDate) {
+        lastMessageDate = dateString;
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'msg-date-separator';
+        dateDiv.innerHTML = `<span>${dateString}</span>`;
+        container.appendChild(dateDiv);
+    }
+    
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isOut ? 'out' : 'in');
+    div.dataset.msgId = m.id;
+    
+    if (isDel) {
+        div.innerHTML = `<div class="msg-bubble deleted"><p>[x] Удалено</p><div class="time">${time}</div></div>`;
+    } else if (m.sending) {
+        div.innerHTML = `
+            <div class="msg-bubble" style="opacity:0.8">
+                <p>${m.content}</p>
+                <div class="msg-status">[~] Отправляется...</div>
+                <div class="time">${time}</div>
+            </div>`;
+    } else {
+        div.innerHTML = `<div class="msg-bubble"><p>${m.content}</p><div class="time">${time}</div></div>`;
+    }
+    
+    if (!isTemp && !isDel) {
         div.addEventListener('contextmenu', e => { e.preventDefault(); if (m.sender_id === user.id) showMsgMenu(e.clientX, e.clientY, m.id); });
         let lp;
         div.addEventListener('touchstart', e => { lp = setTimeout(() => { if (m.sender_id === user.id) showMsgMenu(e.touches[0].clientX, e.touches[0].clientY, m.id); }, 500); });
         div.addEventListener('touchend', () => clearTimeout(lp));
         div.addEventListener('touchmove', () => clearTimeout(lp));
-        container.appendChild(div);
     }
+    
+    container.appendChild(div);
+}
 
+// ============ ФОРМАТИРОВАНИЕ ДАТЫ ============
+function getDateString(date) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    if (msgDay.getTime() === today.getTime()) {
+        return 'Сегодня';
+    } else if (msgDay.getTime() === yesterday.getTime()) {
+        return 'Вчера';
+    } else {
+        return date.toLocaleDateString('ru-RU', { 
+            day: 'numeric', 
+            month: 'long',
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+    }
+}
     function showMsgMenu(x, y, id) {
         closeMsgMenu();
         const m = document.createElement('div');
