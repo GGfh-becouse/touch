@@ -352,15 +352,25 @@
         c.scrollTop=c.scrollHeight;
     }
 
-    async function checkNewMessages(){
-        if(!chatId)return;
-        let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});
-        if(!msgs||msgs.length<=lastMsgCount)return;
-        let c=document.getElementById('messages');if(c.querySelector('.messages-center'))c.innerHTML='';
-        for(let i=lastMsgCount;i<msgs.length;i++)appendMessage(msgs[i],c);
-        lastMsgCount=msgs.length;c.scrollTop=c.scrollHeight;markAsRead(chatId);
-    }
-
+// В checkNewMessages, после проверки msgs.length <= lastMsgCount добавить очистку временных
+async function checkNewMessages() {
+    if (!chatId) return;
+    const { data: msgs } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
+    
+    const container = document.getElementById('messages');
+    if (container.querySelector('.messages-center')) container.innerHTML = '';
+    
+    // Удаляем временные сообщения
+    const temps = container.querySelectorAll('.msg[data-msg-id^="temp_"]');
+    temps.forEach(el => el.remove());
+    
+    if (!msgs || msgs.length <= lastMsgCount) return;
+    
+    for (let i = lastMsgCount; i < msgs.length; i++) appendMessage(msgs[i], container);
+    lastMsgCount = msgs.length;
+    container.scrollTop = container.scrollHeight;
+    markAsRead(chatId);
+}
     function getDateString(date){
         let now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
         let yesterday=new Date(today);yesterday.setDate(yesterday.getDate()-1);
