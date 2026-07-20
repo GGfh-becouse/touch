@@ -6,7 +6,7 @@
     <title>Touch Messenger</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
@@ -14,7 +14,7 @@
             --bg:#f5f5f5;--bg2:#ffffff;--card:#fafafa;--card2:#f0f0f0;
             --border:#e0e0e0;--border2:#d0d0d0;--text:#1a1a1a;--text2:#666;--text3:#999;
             --accent:#7b1f2b;--accent2:#9e2d3a;--accent3:#5a1520;
-            --font:'Ubuntu',sans-serif;
+            --font:'Ubuntu',sans-serif;--head:'Space Grotesk',sans-serif;
             --radius:12px;--radius-lg:16px;--transition:200ms cubic-bezier(0.25,0.8,0.25,1.2);
         }
         body.dark{
@@ -26,9 +26,9 @@
             height:100vh;height:100dvh;overflow:hidden;-webkit-tap-highlight-color:transparent;
             -webkit-font-smoothing:antialiased;letter-spacing:-0.01em;
         }
-        button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit;font-size:inherit;transition:all var(--transition)}
+        button{cursor:pointer;border:none;background:none;color:inherit;font-family:var(--font);font-size:inherit;transition:all var(--transition)}
         button:active{transform:scale(0.96)}
-        input,textarea{font-family:inherit;background:none;border:none;color:var(--text);outline:none;font-size:15px;letter-spacing:-0.01em}
+        input,textarea{font-family:var(--font);background:none;border:none;color:var(--text);outline:none;font-size:15px;letter-spacing:-0.01em}
         input::placeholder,textarea::placeholder{color:var(--text3)}
         ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -47,7 +47,7 @@
 
         .app{display:flex;height:calc(100vh - 60px);position:relative;overflow:hidden}
         .chats-screen{width:100%;max-width:380px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:transform 0.35s cubic-bezier(0.25,0.8,0.25,1)}
-        .search-wrap{padding:12px}
+        .search-wrap{padding:12px;position:relative}
         .search-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;display:flex;align-items:center;gap:8px;transition:border-color var(--transition)}
         .search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(123,31,43,0.1)}
         .search-box input{flex:1;font-size:14px;background:transparent}
@@ -102,6 +102,9 @@
         .btn-send:hover{background:var(--accent2)}
         .btn-send:active{transform:scale(0.9)}
 
+        .fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:150;box-shadow:0 4px 16px rgba(123,31,43,0.3);transition:all var(--transition)}
+        .fab:hover{background:var(--accent2);transform:scale(1.05)}.fab:active{transform:scale(0.9)}
+
         .fullscreen{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:300;flex-direction:column;animation:fadeIn 0.25s ease}
         .fullscreen.show{display:flex}
         .fs-header{height:200px;background:linear-gradient(135deg,var(--accent3),var(--accent));display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;position:relative;flex-shrink:0}
@@ -121,7 +124,6 @@
         .splash-screen.hide{opacity:0;pointer-events:none}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-        /* АВТОРИЗАЦИЯ НА ВЕСЬ ЭКРАН */
         .auth-screen{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:400;flex-direction:column;animation:fadeIn 0.3s ease}
         .auth-screen.show{display:flex}
         .auth-header{height:220px;background:linear-gradient(135deg,var(--accent3),var(--accent));display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;flex-shrink:0}
@@ -138,110 +140,43 @@
         .auth-error{color:var(--accent);font-size:12px;text-align:center;margin-bottom:8px;display:none}
         .auth-subtitle{color:rgba(255,255,255,.7);font-size:13px;margin-top:4px}
 
-@media (max-width: 768px) {
-    .splash-screen {
-        padding: 20px;
-    }
-}
-       @media (max-width: 768px) {
-    .header {
-        height: 48px;
-        padding: 0 10px;
-    }
-    .logo-text {
-        font-size: 15px;
-    }
-    .back-btn {
-        display: flex;
-        width: 30px;
-        height: 30px;
-        font-size: 14px;
-    }
-    .hbtn {
-        width: 32px;
-        height: 32px;
-    }
-    .ava-sm {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-    }
-    .app {
-        height: calc(100vh - 48px);
-        height: calc(100dvh - 48px);
-        display: block;
-    }
-    .chats-screen {
-        max-width: 100%;
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: 1;
-    }
-    .chat-screen {
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: 2;
-        transform: translateX(100%);
-    }
-    .chat-screen.active {
-        transform: translateX(0);
-    }
-    .chats-screen.hidden {
-        transform: translateX(-30%);
-        opacity: .3;
-        pointer-events: none;
-    }
-    .msg-bubble {
-        max-width: 78%;
-    }
-    .chat-header {
-        height: 48px;
-        padding: 0 10px;
-    }
-    .ava-lg {
-        width: 34px;
-        height: 34px;
-        font-size: 13px;
-    }
-    .chat-title {
-        font-size: 14px;
-    }
-    .input-area {
-        padding: 8px 10px;
-    }
-    .input-area textarea {
-        font-size: 13px;
-        min-height: 34px;
-    }
-    .btn-send {
-        width: 36px;
-        height: 36px;
-        font-size: 14px;
-    }
-    .auth-header {
-        height: 160px;
-    }
-    .fs-header {
-        height: 160px;
-    }
-    .search-wrap {
-        padding: 8px;
-    }
-    .messages {
-        padding: 10px;
-    }
+        @media(min-width:769px){
+            .app{flex-direction:row}
+            .chats-screen{width:340px}
+            .chat-screen{display:flex!important}
+            .auth-body{padding:32px}
+            .fab{display:none}
+        }
+        @media(max-width:768px){
+            .header{height:48px;padding:0 10px}
+            .logo-text{font-size:15px}
+            .back-btn{display:flex;width:30px;height:30px;font-size:14px}
+            .hbtn{width:32px;height:32px}
+            .ava-sm{width:28px;height:28px;font-size:12px}
+            .app{height:calc(100vh - 48px);height:calc(100dvh - 48px);display:block}
+            .chats-screen{max-width:100%;width:100%;height:100%;position:absolute;top:0;left:0;z-index:1}
+            .chat-screen{width:100%;height:100%;position:absolute;top:0;left:0;z-index:2;transform:translateX(100%)}
+            .chat-screen.active{transform:translateX(0)}
+            .chats-screen.hidden{transform:translateX(-30%);opacity:.3;pointer-events:none}
+            .msg-bubble{max-width:78%}
+            .chat-header{height:48px;padding:0 10px}
+            .ava-lg{width:34px;height:34px;font-size:13px}
+            .chat-title{font-size:14px}
+            .input-area{padding:8px 10px}
+            .input-area textarea{font-size:13px;min-height:34px}
+            .btn-send{width:36px;height:36px;font-size:14px}
+            .auth-header{height:160px}
+            .fs-header{height:160px}
+            .search-wrap{padding:8px}
+            .messages{padding:10px}
+            .fab{display:flex}
+            .splash-screen{padding:20px}
         }
     </style>
 </head>
 <body>
     <div class="splash-screen" id="splashScreen">
-        <img src="you_know.png" style="width:72px;height:72px;border-radius:18px;margin-bottom:16px">
+        <img src="you_know.png" style="width:72px;height:72px;border-radius:18px;margin-bottom:16px" alt="Touch">
         <div style="font-family:var(--head);font-size:24px;font-weight:700">TOUCH</div>
         <div style="color:var(--text3);font-size:13px;margin-top:4px">powered by Zmee</div>
         <div style="width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-top:24px"></div>
@@ -249,13 +184,13 @@
     <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
     <header class="header">
-        <div class="header-left"><button class="back-btn" id="backBtn" onclick="goBack()">←</button><img src="you_know.png" style="width:26px;height:26px;border-radius:6px"><span class="logo-text">Touch</span></div>
+        <div class="header-left"><button class="back-btn" id="backBtn" onclick="goBack()">&larr;</button><img src="you_know.png" style="width:26px;height:26px;border-radius:6px" alt="Touch"><span class="logo-text">Touch</span></div>
         <div class="header-right"><button class="hbtn" onclick="openProfile()"><div class="ava-sm" id="headAva">?</div></button></div>
     </header>
 
     <div class="app">
         <div class="chats-screen" id="chatsScreen">
-            <div class="search-wrap"><div class="search-box"><span style="color:var(--text3)">🔍</span><input type="text" placeholder="Поиск" id="searchInput"></div><div class="search-results" id="searchResults"></div></div>
+            <div class="search-wrap"><div class="search-box"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4" stroke="var(--text3)" stroke-width="1.5" fill="none"/><path d="M10.5 10.5L14 14" stroke="var(--text3)" stroke-width="1.5" stroke-linecap="round"/></svg><input type="text" placeholder="Поиск" id="searchInput"></div><div class="search-results" id="searchResults"></div></div>
             <div class="chats-list" id="chatsList"></div>
         </div>
         <div class="chat-screen" id="chatScreen">
@@ -265,45 +200,26 @@
         </div>
     </div>
 
-    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <button class="fab" id="fabBtn" onclick="showCreateMenu()">+</button>
+
     <div class="auth-screen" id="authScreen">
-        <div class="auth-header">
-            <div class="auth-logo"><img src="you_know.png" style="width:48px;height:48px;border-radius:12px"></div>
-            <div style="color:#fff;font-family:var(--head);font-size:22px;font-weight:700">Touch</div>
-            <div class="auth-subtitle" id="authSubtitle">Войдите в аккаунт</div>
-        </div>
-        <div class="auth-body">
-            <div class="auth-error" id="authError"></div>
-            <input type="email" class="auth-input" id="authEmail" placeholder="Email">
-            <input type="text" class="auth-input" id="authUsername" placeholder="Имя пользователя">
-            <input type="password" class="auth-input" id="authPassword" placeholder="Пароль">
-            <button class="auth-btn" id="authSubmitBtn">Войти</button>
-            <p class="auth-switch"><span id="authToggleBtn">Нет аккаунта? Зарегистрироваться</span></p>
-        </div>
+        <div class="auth-header"><div class="auth-logo"><img src="you_know.png" style="width:48px;height:48px;border-radius:12px" alt="Touch"></div><div style="color:#fff;font-family:var(--head);font-size:22px;font-weight:700">Touch</div><div class="auth-subtitle" id="authSubtitle">Войдите в аккаунт</div></div>
+        <div class="auth-body"><div class="auth-error" id="authError"></div><input type="email" class="auth-input" id="authEmail" placeholder="Email"><input type="text" class="auth-input" id="authUsername" placeholder="Имя пользователя"><input type="password" class="auth-input" id="authPassword" placeholder="Пароль"><button class="auth-btn" id="authSubmitBtn">Войти</button><p class="auth-switch"><span id="authToggleBtn">Нет аккаунта? Зарегистрироваться</span></p></div>
     </div>
 
-    <!-- ЭКРАН ПРОФИЛЯ -->
     <div class="fullscreen" id="profileScreen">
-        <div class="fs-header"><button class="fs-close" onclick="closeProfile()">✕</button><div class="fs-avatar" id="profBigAva">U</div><div style="color:#fff;font-family:var(--head);font-size:20px;margin-top:10px" id="profBigName">Пользователь</div><div style="color:rgba(255,255,255,.7);font-size:13px" id="profBigTid">@touch_user</div></div>
-        <div class="fs-body">
-            <div class="setting-row" onclick="updateDisplayName()"><span class="lbl">Имя</span><span class="val" id="profDisplayName">-</span></div>
-            <div class="setting-row"><span class="lbl">Email</span><span class="val" id="profEmail">-</span></div>
-            <div class="setting-row" onclick="setPassword()"><span class="lbl">Пароль</span><span class="val" id="passwordStatus">Не установлен</span></div>
-            <div class="setting-row" onclick="copyTid()"><span class="lbl">TID</span><span class="val" id="profTid">-</span></div>
-            <div class="setting-row"><span class="lbl">Регистрация</span><span class="val" id="profDate">-</span></div>
-            <div class="setting-row" onclick="toggleTheme()"><span class="lbl">Тёмная тема</span><span class="val"><div class="toggle-switch" id="themeToggle"></div></span></div>
-            <button class="auth-btn-secondary" onclick="openLogoutScreen()" style="margin-top:20px">Выйти из аккаунта</button>
-        </div>
+        <div class="fs-header"><button class="fs-close" onclick="closeProfile()">&times;</button><div class="fs-avatar" id="profBigAva">U</div><div style="color:#fff;font-family:var(--head);font-size:20px;margin-top:10px" id="profBigName">Пользователь</div><div style="color:rgba(255,255,255,.7);font-size:13px" id="profBigTid">@touch_user</div></div>
+        <div class="fs-body"><div class="setting-row" onclick="updateDisplayName()"><span class="lbl">Имя</span><span class="val" id="profDisplayName">-</span></div><div class="setting-row"><span class="lbl">Email</span><span class="val" id="profEmail">-</span></div><div class="setting-row" onclick="setPassword()"><span class="lbl">Пароль</span><span class="val" id="passwordStatus">Не установлен</span></div><div class="setting-row" onclick="copyTid()"><span class="lbl">TID</span><span class="val" id="profTid">-</span></div><div class="setting-row"><span class="lbl">Регистрация</span><span class="val" id="profDate">-</span></div><div class="setting-row" onclick="toggleTheme()"><span class="lbl">Тёмная тема</span><span class="val"><div class="toggle-switch" id="themeToggle"></div></span></div><button class="auth-btn-secondary" onclick="openLogoutScreen()" style="margin-top:20px">Выйти из аккаунта</button></div>
     </div>
 
-    <!-- ЭКРАН ВЫХОДА -->
     <div class="fullscreen" id="logoutScreen">
-        <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeLogoutScreen()">✕</button><div style="color:#fff;font-family:var(--head);font-size:22px">Выход</div><div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:6px">Вы уверены?</div></div>
-        <div class="fs-body" style="text-align:center;padding-top:30px">
-            <p style="color:var(--text2);margin-bottom:20px">Все локальные данные будут очищены.</p>
-            <button class="auth-btn" onclick="confirmLogout()">Да, выйти</button>
-            <button class="auth-btn-secondary" onclick="closeLogoutScreen()" style="margin-top:8px">Отмена</button>
-        </div>
+        <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeLogoutScreen()">&times;</button><div style="color:#fff;font-family:var(--head);font-size:22px">Выход</div><div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:6px">Вы уверены?</div></div>
+        <div class="fs-body" style="text-align:center;padding-top:30px"><p style="color:var(--text2);margin-bottom:20px">Все локальные данные будут очищены.</p><button class="auth-btn" onclick="confirmLogout()">Да, выйти</button><button class="auth-btn-secondary" onclick="closeLogoutScreen()" style="margin-top:8px">Отмена</button></div>
+    </div>
+
+    <div class="fullscreen" id="createMenu">
+        <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeCreateMenu()">&times;</button><div style="color:#fff;font-family:var(--head);font-size:22px">Создать</div><div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:6px">Выберите тип</div></div>
+        <div class="fs-body"><div class="setting-row" onclick="createDirectChat()"><span class="lbl">Личный чат</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createGroupChat()"><span class="lbl">Группа</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createChannel()"><span class="lbl">Канал</span><span class="val">&rarr;</span></div></div>
     </div>
 
     <script>
@@ -312,9 +228,10 @@
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let user=null,chatId=null,isLogin=true,pollTimer=null,chatsPollTimer=null,lastMsgCount=0,lastMessageDate=null;
 
+    function setUserContext(uid){db.headers={'X-User-ID':uid}}
     function hideSplash(){let s=document.getElementById('splashScreen');if(s&&!s.classList.contains('hide')){s.classList.add('hide');setTimeout(()=>{if(s.parentNode)s.remove()},400)}}
     const saved=localStorage.getItem('touchUser');
-    if(saved){user=JSON.parse(saved);hideAuth();refreshUI();loadChats();startChatsPolling();setTimeout(hideSplash,300)}
+    if(saved){try{user=JSON.parse(saved);if(user&&user.id){setUserContext(user.id);hideAuth();refreshUI();loadChats();startChatsPolling();setTimeout(hideSplash,300)}}catch(e){localStorage.removeItem('touchUser');showAuth();setTimeout(hideSplash,1500)}}
     else{showAuth();setTimeout(hideSplash,1500)}
     if(localStorage.getItem('touchTheme')==='dark')document.body.classList.add('dark');
 
@@ -324,109 +241,103 @@
     function closeProfile(){document.getElementById('profileScreen').classList.remove('show')}
     function openLogoutScreen(){document.getElementById('logoutScreen').classList.add('show')}
     function closeLogoutScreen(){document.getElementById('logoutScreen').classList.remove('show')}
+    function showCreateMenu(){document.getElementById('createMenu').classList.add('show')}
+    function closeCreateMenu(){document.getElementById('createMenu').classList.remove('show')}
 
     function refreshUI(){
-        if(!user)return;
-        let n=user.display_name||user.username||'?';
-        document.getElementById('headAva').textContent=n[0].toUpperCase();
-        document.getElementById('profBigAva').textContent=n[0].toUpperCase();
-        document.getElementById('profBigName').textContent=n;
-        document.getElementById('profBigTid').textContent=user.tid||'@touch_user';
-        document.getElementById('profDisplayName').textContent=n;
-        document.getElementById('profEmail').textContent=user.email||'-';
-        document.getElementById('profTid').textContent=user.tid||'-';
-        document.getElementById('profDate').textContent=user.created_at?new Date(user.created_at).toLocaleDateString('ru-RU'):'-';
+        if(!user)return;let n=user.display_name||user.username||'?';
+        document.getElementById('headAva').textContent=n[0].toUpperCase();document.getElementById('profBigAva').textContent=n[0].toUpperCase();
+        document.getElementById('profBigName').textContent=n;document.getElementById('profBigTid').textContent=user.tid||'@touch_user';
+        document.getElementById('profDisplayName').textContent=n;document.getElementById('profEmail').textContent=user.email||'-';
+        document.getElementById('profTid').textContent=user.tid||'-';document.getElementById('profDate').textContent=user.created_at?new Date(user.created_at).toLocaleDateString('ru-RU'):'-';
         document.getElementById('passwordStatus').textContent=user.password_hash?'Установлен':'Не установлен';
         document.getElementById('passwordStatus').style.color=user.password_hash?'#4CAF50':'var(--accent)';
-        let t=document.getElementById('themeToggle');
-        if(t){if(document.body.classList.contains('dark'))t.classList.add('active');else t.classList.remove('active')}
+        let t=document.getElementById('themeToggle');if(t){if(document.body.classList.contains('dark'))t.classList.add('active');else t.classList.remove('active')}
     }
-
-    function toggleTheme(){document.body.classList.toggle('dark');let on=document.body.classList.contains('dark');localStorage.setItem('touchTheme',on?'dark':'light');refreshUI()}
+    function toggleTheme(){document.body.classList.toggle('dark');localStorage.setItem('touchTheme',document.body.classList.contains('dark')?'dark':'light');refreshUI()}
 
     async function setPassword(){
         if(!user)return;
-        let cur=user.password_hash?prompt('Текущий пароль:',''):'';
-        let np=prompt('Новый пароль (мин 6):','');
-        if(!np||np.length<6){alert('Минимум 6 символов');return}
-        if(user.password_hash){let{data:ok}=await db.rpc('check_password',{user_id:user.id,input_password:cur||''});if(!ok){alert('Неверный пароль');return}}
-        await db.rpc('set_user_password',{user_id:user.id,new_password:np});
+        let np=prompt('Новый пароль (мин 8 символов):','');
+        if(!np||np.length<8){alert('Минимум 8 символов');return}
+        let{error}=await db.rpc('set_password',{uid:user.id,pass:np});
+        if(error){alert('Ошибка: '+error.message);return}
         user.password_hash='***';localStorage.setItem('touchUser',JSON.stringify(user));refreshUI();alert('OK')
     }
 
     async function doAuth(){
-        let email=document.getElementById('authEmail').value.trim();
-        let username=document.getElementById('authUsername').value.trim();
-        let password=document.getElementById('authPassword').value.trim();
-        let err=document.getElementById('authError');err.style.display='none';
+        let email=document.getElementById('authEmail').value.trim();let username=document.getElementById('authUsername').value.trim();
+        let password=document.getElementById('authPassword').value.trim();let err=document.getElementById('authError');err.style.display='none';
         if(!email||!username||!password){err.textContent='Заполните все поля';err.style.display='block';return}
+        if(password.length<8){err.textContent='Пароль минимум 8 символов';err.style.display='block';return}
         try{
             if(isLogin){
-                let{data,error}=await db.from('users').select('*').eq('email',email).eq('username',username).single();
-                if(error||!data){err.textContent='Пользователь не найден';err.style.display='block';return}
-                if(data.password_hash){let{data:ok}=await db.rpc('check_password',{user_id:data.id,input_password:password});if(!ok){err.textContent='Неверный пароль';err.style.display='block';return}}
-                user=data;await db.from('users').update({status:'online',last_seen:new Date()}).eq('id',user.id);
+                let{data,error}=await db.from('users').select('id,email,username,display_name,tid,status,created_at').eq('email',email).eq('username',username).single();
+                if(error||!data){err.textContent='Не найдено';err.style.display='block';return}
+                let{data:ok}=await db.rpc('verify_password',{uid:data.id,pass:password});if(!ok){err.textContent='Неверный пароль';err.style.display='block';return}
+                user=data;setUserContext(user.id);await db.from('users').update({status:'online',last_seen:new Date()}).eq('id',user.id);
             }else{
                 let{data:ex}=await db.from('users').select('id').or(`email.eq.${email},username.eq.${username}`).maybeSingle();
-                if(ex){err.textContent='Пользователь уже существует';err.style.display='block';return}
-                let{data:hash}=await db.rpc('hash_password',{input_password:password});
-                let{data:nu,error}=await db.from('users').insert({email,username,display_name:username,status:'online',password_hash:hash}).select().single();
-                if(error)throw error;user=nu;
+                if(ex){err.textContent='Уже существует';err.style.display='block';return}
+                let{data:nu,error}=await db.from('users').insert({email,username,display_name:username,status:'online'}).select('id,email,username,display_name,tid,status,created_at').single();
+                if(error)throw error;
+                await db.rpc('set_password',{uid:nu.id,pass:password});user=nu;setUserContext(user.id);
             }
             localStorage.setItem('touchUser',JSON.stringify(user));hideAuth();hideSplash();refreshUI();loadChats();startChatsPolling();
         }catch(e){err.textContent=e.message;err.style.display='block'}
     }
-
     document.getElementById('authSubmitBtn').addEventListener('click',doAuth);
     document.getElementById('authToggleBtn').addEventListener('click',function(){
-        isLogin=!isLogin;
-        document.getElementById('authSubtitle').textContent=isLogin?'Войдите в аккаунт':'Создайте новый аккаунт';
+        isLogin=!isLogin;document.getElementById('authSubtitle').textContent=isLogin?'Войдите в аккаунт':'Создайте аккаунт';
         document.getElementById('authSubmitBtn').textContent=isLogin?'Войти':'Зарегистрироваться';
-        this.textContent=isLogin?'Нет аккаунта? Зарегистрироваться':'Есть аккаунт? Войти';
-        document.getElementById('authError').style.display='none';
+        this.textContent=isLogin?'Нет аккаунта? Регистрация':'Есть аккаунт? Войти';document.getElementById('authError').style.display='none';
     });
 
     function startChatsPolling(){if(chatsPollTimer)clearInterval(chatsPollTimer);chatsPollTimer=setInterval(updateChats,2000)}
-    async function updateChats(){if(!user)return;let{data}=await db.from('chat_members').select('chat_id,chats(id,name)').eq('user_id',user.id);if(!data)return;for(let item of data){let{data:count}=await db.rpc('get_unread_count',{chat_id:item.chats.id,user_id:user.id});let unread=count||0;let badge=document.getElementById('badge-'+item.chats.id);let last=document.getElementById('last-'+item.chats.id);let itemEl=document.querySelector(`[data-chat-id="${item.chats.id}"]`);if(badge){badge.textContent=unread;badge.style.display=unread>0?'inline-block':'none'}if(last){last.textContent=unread>0?unread+' новых':'';last.style.color=unread>0?'var(--accent)':'var(--text2)'}if(itemEl){if(unread>0)itemEl.classList.add('unread');else itemEl.classList.remove('unread')}}}
+    async function updateChats(){if(!user)return;let{data}=await db.from('chat_members').select('chat_id,chats(id,name)').eq('user_id',user.id);if(!data)return;for(let item of data){let{data:count}=await db.rpc('get_unread_count',{chat_id:item.chats.id,user_id:user.id});let unread=count||0;let badge=document.getElementById('badge-'+item.chats.id);let last=document.getElementById('last-'+item.chats.id);let itemEl=document.querySelector('[data-chat-id="'+item.chats.id+'"]');if(badge){badge.textContent=unread;badge.style.display=unread>0?'inline-block':'none'}if(last){last.textContent=unread>0?unread+' новых':'';last.style.color=unread>0?'var(--accent)':'var(--text2)'}if(itemEl){if(unread>0)itemEl.classList.add('unread');else itemEl.classList.remove('unread')}}}
 
-    async function loadChats(){if(!user)return;let{data}=await db.from('chat_members').select('chat_id,chats(id,name)').eq('user_id',user.id);let list=document.getElementById('chatsList');list.innerHTML='';if(data&&data.length){for(let item of data){let isActive=chatId===item.chats.id;let div=document.createElement('div');div.className='chat-item'+(isActive?' active':'');div.dataset.chatId=item.chats.id;div.onclick=()=>openChat(item.chats.id,item.chats.name);div.innerHTML=`<div class="ava">${(item.chats.name||'?')[0]}</div><div class="chat-info"><div class="chat-name">${item.chats.name}</div><div class="chat-last" id="last-${item.chats.id}"></div></div><div class="unread-badge" id="badge-${item.chats.id}" style="display:none">0</div>`;list.appendChild(div)}updateChats()}else{list.innerHTML='<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>'}hideSplash()}
+    async function loadChats(){if(!user)return;let{data}=await db.from('chat_members').select('chat_id,chats(id,name)').eq('user_id',user.id);let list=document.getElementById('chatsList');list.innerHTML='';if(data&&data.length){for(let item of data){let isActive=chatId===item.chats.id;let div=document.createElement('div');div.className='chat-item'+(isActive?' active':'');div.dataset.chatId=item.chats.id;div.addEventListener('click',()=>openChat(item.chats.id,item.chats.name));let ava=document.createElement('div');ava.className='ava';ava.textContent=(item.chats.name||'?')[0];let info=document.createElement('div');info.className='chat-info';let name=document.createElement('div');name.className='chat-name';name.textContent=item.chats.name;let last=document.createElement('div');last.className='chat-last';last.id='last-'+item.chats.id;info.appendChild(name);info.appendChild(last);let badge=document.createElement('div');badge.className='unread-badge';badge.id='badge-'+item.chats.id;badge.style.display='none';badge.textContent='0';div.appendChild(ava);div.appendChild(info);div.appendChild(badge);list.appendChild(div)}updateChats()}else{list.innerHTML='<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>'}hideSplash()}
 
     async function openChat(id,name){if(pollTimer)clearInterval(pollTimer);chatId=id;lastMsgCount=0;lastMessageDate=null;document.getElementById('chatTitle').textContent=name;document.getElementById('chatAva').textContent=name[0];await loadMessages();markAsRead(id);updateChats();pollTimer=setInterval(checkNewMessages,1000);if(window.innerWidth<=768){document.getElementById('chatScreen').classList.add('active');document.getElementById('chatsScreen').classList.add('hidden');document.getElementById('backBtn').style.display='flex'}}
-    async function loadMessages(){if(!chatId)return;lastMessageDate=null;let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});let c=document.getElementById('messages');c.innerHTML='';if(msgs&&msgs.length){lastMsgCount=msgs.length;for(let m of msgs)appendMessage(m,c)}else{c.innerHTML='<div class="messages-center">Нет сообщений</div>'}c.scrollTop=c.scrollHeight}
-    async function checkNewMessages(){if(!chatId)return;let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});let c=document.getElementById('messages');if(c.querySelector('.messages-center'))c.innerHTML='';let temps=c.querySelectorAll('.msg[data-msg-id^="temp_"]');temps.forEach(el=>el.remove());if(!msgs||msgs.length<=lastMsgCount)return;for(let i=lastMsgCount;i<msgs.length;i++)appendMessage(msgs[i],c);lastMsgCount=msgs.length;c.scrollTop=c.scrollHeight;markAsRead(chatId)}
+    async function loadMessages(){if(!chatId)return;lastMessageDate=null;let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});let c=document.getElementById('messages');c.innerHTML='';if(msgs&&msgs.length){lastMsgCount=msgs.length;for(let m of msgs)appendMessage(m,c)}else{let center=document.createElement('div');center.className='messages-center';center.textContent='Нет сообщений';c.appendChild(center)}c.scrollTop=c.scrollHeight}
+    async function checkNewMessages(){if(!chatId)return;let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});let c=document.getElementById('messages');let placeholder=c.querySelector('.messages-center');if(placeholder)placeholder.remove();let temps=c.querySelectorAll('.msg[data-msg-id^="temp_"]');temps.forEach(el=>el.remove());if(!msgs||msgs.length<=lastMsgCount)return;for(let i=lastMsgCount;i<msgs.length;i++)appendMessage(msgs[i],c);lastMsgCount=msgs.length;c.scrollTop=c.scrollHeight;markAsRead(chatId)}
     function getDateString(d){let n=new Date(),t=new Date(n.getFullYear(),n.getMonth(),n.getDate()),y=new Date(t);y.setDate(y.getDate()-1);let dd=new Date(d.getFullYear(),d.getMonth(),d.getDate());if(dd.getTime()===t.getTime())return'Сегодня';if(dd.getTime()===y.getTime())return'Вчера';return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:d.getFullYear()!==n.getFullYear()?'numeric':undefined})}
-    function appendMessage(m,c,isTemp=false){let isOut=m.sender_id===user.id,isDel=m.is_deleted;let d=new Date(m.created_at),time=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});let ds=getDateString(d);if(ds!==lastMessageDate){lastMessageDate=ds;let sep=document.createElement('div');sep.className='msg-date-separator';sep.innerHTML='<span>'+ds+'</span>';c.appendChild(sep)}let div=document.createElement('div');div.className='msg '+(isOut?'out':'in');div.dataset.msgId=m.id;if(isDel)div.innerHTML=`<div class="msg-bubble deleted"><p>[x] Удалено</p><div class="time">${time}</div></div>`;else if(m.sending)div.innerHTML=`<div class="msg-bubble" style="opacity:0.8"><p>${m.content}</p><div style="font-size:9px;color:var(--text3);text-align:right">[~] Отправка...</div><div class="time">${time}</div></div>`;else div.innerHTML=`<div class="msg-bubble"><p>${m.content}</p><div class="time">${time}</div></div>`;if(!isTemp&&!isDel){div.addEventListener('contextmenu',e=>{e.preventDefault();if(m.sender_id===user.id)showMsgMenu(e.clientX,e.clientY,m.id)});let lp;div.addEventListener('touchstart',e=>{lp=setTimeout(()=>{if(m.sender_id===user.id)showMsgMenu(e.touches[0].clientX,e.touches[0].clientY,m.id)},500)});div.addEventListener('touchend',()=>clearTimeout(lp));div.addEventListener('touchmove',()=>clearTimeout(lp))}c.appendChild(div)}
-    function showMsgMenu(x,y,id){closeMsgMenu();let m=document.createElement('div');m.id='msgMenu';m.style.cssText=`position:fixed;left:${x}px;top:${y}px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:500;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.1)`;m.innerHTML=`<button onclick="deleteMessage('${id}')" style="width:100%;padding:8px 14px;text-align:left;font-size:13px;color:var(--accent)">[x] Удалить</button><button onclick="closeMsgMenu()" style="width:100%;padding:8px 14px;text-align:left;font-size:12px;color:var(--text2)">[-] Отмена</button>`;document.body.appendChild(m);setTimeout(()=>{document.addEventListener('click',closeMsgMenu);document.addEventListener('touchstart',closeMsgMenu)},100)}
+    function appendMessage(m,c,isTemp=false){
+        let isOut=m.sender_id===user.id,isDel=m.is_deleted;let d=new Date(m.created_at),time=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+        let ds=getDateString(d);if(ds!==lastMessageDate){lastMessageDate=ds;let sep=document.createElement('div');sep.className='msg-date-separator';let span=document.createElement('span');span.textContent=ds;sep.appendChild(span);c.appendChild(sep)}
+        let div=document.createElement('div');div.className='msg '+(isOut?'out':'in');div.dataset.msgId=m.id;div.dataset.senderId=m.sender_id;
+        let bubble=document.createElement('div');bubble.className='msg-bubble'+(isDel?' deleted':'');
+        let p=document.createElement('p');p.textContent=isDel?'[x] Удалено':m.content;
+        let timeSpan=document.createElement('div');timeSpan.className='time';timeSpan.textContent=time;
+        bubble.appendChild(p);bubble.appendChild(timeSpan);div.appendChild(bubble);
+        if(!isTemp&&!isDel&&m.sender_id===user.id){
+            div.addEventListener('contextmenu',e=>{e.preventDefault();showMsgMenu(e.clientX,e.clientY,m.id)});
+            let lp;div.addEventListener('touchstart',e=>{lp=setTimeout(()=>showMsgMenu(e.touches[0].clientX,e.touches[0].clientY,m.id),500)});
+            div.addEventListener('touchend',()=>clearTimeout(lp));div.addEventListener('touchmove',()=>clearTimeout(lp));
+        }
+        c.appendChild(div);
+    }
+    function showMsgMenu(x,y,id){closeMsgMenu();let m=document.createElement('div');m.id='msgMenu';m.style.cssText='position:fixed;left:'+x+'px;top:'+y+'px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:500;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.1)';let delBtn=document.createElement('button');delBtn.textContent='[x] Удалить';delBtn.style.cssText='width:100%;padding:8px 14px;text-align:left;font-size:13px;color:var(--accent)';delBtn.addEventListener('click',()=>deleteMessage(id));let cancelBtn=document.createElement('button');cancelBtn.textContent='[-] Отмена';cancelBtn.style.cssText='width:100%;padding:8px 14px;text-align:left;font-size:12px;color:var(--text2)';cancelBtn.addEventListener('click',closeMsgMenu);m.appendChild(delBtn);m.appendChild(cancelBtn);document.body.appendChild(m);setTimeout(()=>{document.addEventListener('click',closeMsgMenu);document.addEventListener('touchstart',closeMsgMenu)},100)}
     function closeMsgMenu(){let m=document.getElementById('msgMenu');if(m)m.remove();document.removeEventListener('click',closeMsgMenu);document.removeEventListener('touchstart',closeMsgMenu)}
-    async function deleteMessage(id){closeMsgMenu();if(!confirm('Удалить?'))return;await db.from('messages').update({is_deleted:true,content:'[x] Удалено'}).eq('id',id);let el=document.querySelector(`[data-msg-id="${id}"]`);if(el){el.querySelector('.msg-bubble').classList.add('deleted');el.querySelector('p').textContent='[x] Удалено'}}
+    async function deleteMessage(id){closeMsgMenu();if(!confirm('Удалить?'))return;await db.from('messages').update({is_deleted:true,content:'[x] Удалено'}).eq('id',id);let el=document.querySelector('[data-msg-id="'+id+'"]');if(el){el.querySelector('.msg-bubble').classList.add('deleted');el.querySelector('p').textContent='[x] Удалено'}}
     async function markAsRead(cid){if(!user||!cid)return;let{data:ur}=await db.from('messages').select('id').eq('chat_id',cid).neq('sender_id',user.id);if(!ur||!ur.length)return;await db.from('message_reads').upsert(ur.map(m=>({message_id:m.id,user_id:user.id,read_at:new Date().toISOString()})),{onConflict:'message_id,user_id',ignoreDuplicates:true})}
-    async function sendMsg(){if(!chatId)return;let ta=document.getElementById('msgInput');let t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';let tmp={id:'temp_'+Date.now(),content:t,sender_id:user.id,created_at:new Date().toISOString(),is_deleted:false,sending:true};let c=document.getElementById('messages');if(c.querySelector('.messages-center'))c.innerHTML='';appendMessage(tmp,c,true);c.scrollTop=c.scrollHeight;let{error}=await db.from('messages').insert({chat_id:chatId,sender_id:user.id,content:t});if(error){let el=document.querySelector(`[data-msg-id="${tmp.id}"]`);if(el){el.querySelector('.msg-bubble').style.opacity='0.5';el.querySelector('div').textContent='[x] Ошибка'}}else{await checkNewMessages()}}
-    async function createChat(){let q=prompt('Введите имя, email или TID:');if(!q)return;let{data:f}=await db.from('users').select('*').or(`username.eq.${q},display_name.eq.${q},tid.eq.${q},email.eq.${q}`).maybeSingle();if(!f){alert('Не найден');return}if(f.id===user.id){alert('Нельзя с собой');return}if(!confirm('Найден: '+(f.display_name||f.username)+'\nСоздать чат?'))return;let{data:cid}=await db.rpc('get_or_create_chat',{user1:user.id,user2:f.id,chat_name:(user.display_name||user.username)+' & '+(f.display_name||f.username)});loadChats();openChat(cid,(user.display_name||user.username)+' & '+(f.display_name||f.username))}
+    async function sendMsg(){if(!chatId)return;let ta=document.getElementById('msgInput');let t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';let tmp={id:'temp_'+Date.now(),content:t,sender_id:user.id,created_at:new Date().toISOString(),is_deleted:false,sending:true};let c=document.getElementById('messages');let placeholder=c.querySelector('.messages-center');if(placeholder)placeholder.remove();appendMessage(tmp,c,true);c.scrollTop=c.scrollHeight;let{error}=await db.from('messages').insert({chat_id:chatId,sender_id:user.id,content:t});if(error){let el=document.querySelector('[data-msg-id="'+tmp.id+'"]');if(el){el.querySelector('.msg-bubble').style.opacity='0.5';el.querySelector('p').textContent='[x] Ошибка'}}else{await checkNewMessages()}}
+
+    async function createDirectChat(){closeCreateMenu();let q=prompt('Введите имя или TID:');if(!q)return;let{data:found}=await db.rpc('search_users',{query:q,current_user_id:user.id});if(!found||!found.length){alert('Не найден');return}let target=found[0];if(!confirm('Найден: '+target.display_name+'\nСоздать чат?'))return;let{data:cid}=await db.rpc('create_safe_chat',{user1:user.id,user2:target.id,chat_name:(user.display_name||user.username)+' & '+target.display_name});loadChats();openChat(cid,(user.display_name||user.username)+' & '+target.display_name)}
+    async function createGroupChat(){closeCreateMenu();let name=prompt('Название группы:','Новая группа');if(!name)return;let membersStr=prompt('Username участников через запятую:','');if(!membersStr)return;let members=membersStr.split(',').map(m=>m.trim()).filter(m=>m);let{data:cid}=await db.rpc('create_safe_group',{creator_id:user.id,group_name:name,member_usernames:members});loadChats();openChat(cid,name)}
+    async function createChannel(){closeCreateMenu();let name=prompt('Название канала:','Новый канал');if(!name)return;let{data:chat}=await db.from('chats').insert({name:name,is_channel:true,is_group:true}).select().single();await db.from('chat_members').insert({chat_id:chat.id,user_id:user.id});loadChats();openChat(chat.id,name);alert('Канал создан! Функционал появится позже.')}
+
     async function updateDisplayName(){let nm=prompt('Новое имя:',user.display_name||user.username);if(!nm)return;await db.from('users').update({display_name:nm}).eq('id',user.id);user.display_name=nm;localStorage.setItem('touchUser',JSON.stringify(user));refreshUI()}
     async function renameChat(){if(!chatId)return;let nm=prompt('Название:',document.getElementById('chatTitle').textContent);if(!nm)return;await db.from('chats').update({name:nm}).eq('id',chatId);document.getElementById('chatTitle').textContent=nm;document.getElementById('chatAva').textContent=nm[0];loadChats()}
-    async function deleteChat(){if(!chatId)return;if(!confirm('Удалить чат?'))return;await db.from('messages').delete().eq('chat_id',chatId);await db.from('chat_members').delete().eq('chat_id',chatId);await db.from('chats').delete().eq('id',chatId);if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';document.getElementById('messages').innerHTML='<div class="messages-center">Чат удален</div>';loadChats();if(window.innerWidth<=768)goBack()}
-    function goBack(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;lastMsgCount=0;document.getElementById('chatScreen').classList.remove('active');document.getElementById('chatsScreen').classList.remove('hidden');document.getElementById('backBtn').style.display='none';document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';document.getElementById('messages').innerHTML='<div class="messages-center">Выберите чат</div>'}
+    async function deleteChat(){if(!chatId)return;if(!confirm('Удалить чат для себя?'))return;await db.from('chat_members').delete().eq('chat_id',chatId).eq('user_id',user.id);if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';document.getElementById('messages').innerHTML='<div class="messages-center">Чат удалён</div>';loadChats();if(window.innerWidth<=768)goBack()}
+    function goBack(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;lastMsgCount=0;document.getElementById('chatScreen').classList.remove('active');document.getElementById('chatsScreen').classList.remove('hidden');document.getElementById('backBtn').style.display='none';document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';let mc=document.getElementById('messages');mc.innerHTML='';let center=document.createElement('div');center.className='messages-center';center.textContent='Выберите чат';mc.appendChild(center)}
     function copyTid(){navigator.clipboard.writeText(document.getElementById('profTid').textContent);alert('Скопировано!')}
 
-    function confirmLogout(){
-        if(pollTimer){clearInterval(pollTimer);pollTimer=null}
-        if(chatsPollTimer){clearInterval(chatsPollTimer);chatsPollTimer=null}
-        if(user)db.from('users').update({status:'offline',last_seen:new Date()}).eq('id',user.id);
-        localStorage.removeItem('touchUser');
-        user=null;chatId=null;lastMsgCount=0;lastMessageDate=null;
-        closeProfile();closeLogoutScreen();goBack();
-        document.getElementById('chatsList').innerHTML='<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';
-        document.getElementById('headAva').textContent='?';
-        document.getElementById('profBigAva').textContent='U';document.getElementById('profBigName').textContent='Пользователь';document.getElementById('profBigTid').textContent='@touch_user';
-        document.getElementById('profDisplayName').textContent='-';document.getElementById('profEmail').textContent='-';document.getElementById('profTid').textContent='-';document.getElementById('profDate').textContent='-';
-        document.getElementById('passwordStatus').textContent='Не установлен';document.getElementById('passwordStatus').style.color='var(--accent)';
-        document.getElementById('msgInput').value='';document.getElementById('searchInput').value='';
-        showAuth();
-    }
+    function confirmLogout(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(chatsPollTimer){clearInterval(chatsPollTimer);chatsPollTimer=null}if(user)db.from('users').update({status:'offline',last_seen:new Date()}).eq('id',user.id);localStorage.removeItem('touchUser');user=null;chatId=null;lastMsgCount=0;lastMessageDate=null;closeProfile();closeLogoutScreen();goBack();document.getElementById('chatsList').innerHTML='<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';document.getElementById('headAva').textContent='?';document.getElementById('profBigAva').textContent='U';document.getElementById('profBigName').textContent='Пользователь';document.getElementById('profBigTid').textContent='@touch_user';document.getElementById('profDisplayName').textContent='-';document.getElementById('profEmail').textContent='-';document.getElementById('profTid').textContent='-';document.getElementById('profDate').textContent='-';document.getElementById('passwordStatus').textContent='Не установлен';document.getElementById('passwordStatus').style.color='var(--accent)';document.getElementById('msgInput').value='';document.getElementById('searchInput').value='';showAuth()}
 
-    document.getElementById('searchInput').addEventListener('input',function(){let q=this.value.trim().toLowerCase();if(q.length<2){document.getElementById('searchResults').classList.remove('show');return}db.from('users').select('*').or(`username.ilike.%${q}%,display_name.ilike.%${q}%,tid.ilike.%${q}%`).limit(5).then(({data})=>{let html='';if(data&&data.length){data.forEach(u=>{html+=`<div class="search-result-item" onclick="startChatWith('${u.id}','${(u.display_name||u.username).replace(/'/g,"\\'")}')"><div class="ava" style="width:32px;height:32px;font-size:12px">${(u.display_name||u.username)[0]}</div><div><div style="font-weight:500">${u.display_name||u.username}</div><div style="font-size:11px;color:var(--text3)">@${u.username} · ${u.tid||''}</div></div></div>`})}else{html='<div style="padding:12px;color:var(--text3);font-size:12px">Ничего не найдено</div>'}document.getElementById('searchResults').innerHTML=html;document.getElementById('searchResults').classList.add('show')})});
+    document.getElementById('searchInput').addEventListener('input',function(){let q=this.value.trim();if(q.length<2){document.getElementById('searchResults').classList.remove('show');return}db.rpc('search_users',{query:q,current_user_id:user.id}).then(({data})=>{let html='';if(data&&data.length){data.forEach(u=>{html+='<div class="search-result-item" data-uid="'+u.id+'"><div class="ava" style="width:32px;height:32px;font-size:12px">'+(u.display_name||u.username)[0]+'</div><div><div style="font-weight:500">'+u.display_name+'</div><div style="font-size:11px;color:var(--text3)">@'+u.username+'</div></div></div>'})}else{html='<div style="padding:12px;color:var(--text3);font-size:12px">Ничего не найдено</div>'}let results=document.getElementById('searchResults');results.innerHTML=html;results.classList.add('show');results.querySelectorAll('.search-result-item').forEach(el=>{el.addEventListener('click',function(){let uid=this.dataset.uid;let name=this.querySelector('div div').textContent;startChatWith(uid,name)})})})});
     document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))document.getElementById('searchResults').classList.remove('show')});
-    async function startChatWith(uid,name){document.getElementById('searchResults').classList.remove('show');document.getElementById('searchInput').value='';let{data:cid}=await db.rpc('get_or_create_chat',{user1:user.id,user2:uid,chat_name:(user.display_name||user.username)+' & '+name});loadChats();openChat(cid,(user.display_name||user.username)+' & '+name)}
+    async function startChatWith(uid,name){document.getElementById('searchResults').classList.remove('show');document.getElementById('searchInput').value='';let{data:cid}=await db.rpc('create_safe_chat',{user1:user.id,user2:uid,chat_name:(user.display_name||user.username)+' & '+name});loadChats();openChat(cid,(user.display_name||user.username)+' & '+name)}
     document.addEventListener('DOMContentLoaded',()=>{let ta=document.getElementById('msgInput');if(ta)ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'})});
     </script>
 </body>
