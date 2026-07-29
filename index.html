@@ -221,7 +221,42 @@
         <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeCreateMenu()">&times;</button><div style="color:#fff;font-family:var(--head);font-size:22px">Создать</div><div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:6px">Выберите тип</div></div>
         <div class="fs-body"><div class="setting-row" onclick="createDirectChat()"><span class="lbl">Личный чат</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createGroupChat()"><span class="lbl">Группа</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createChannel()"><span class="lbl">Канал</span><span class="val">&rarr;</span></div></div>
     </div>
+<!-- ЭКРАН ВХОДЯЩЕГО ЗВОНКА -->
+<div class="incoming-call-screen" id="incomingScreen">
+    <div class="incoming-avatar" id="incomingAvatar">?</div>
+    <div class="incoming-name" id="incomingName">Входящий звонок</div>
+    <div style="color:rgba(255,255,255,0.7);font-size:13px">Touch Call</div>
+    <div class="incoming-buttons">
+        <button class="btn-reject" onclick="rejectCall()">✕</button>
+        <button class="btn-accept" onclick="acceptCall()">✓</button>
+    </div>
+</div>
 
+<!-- ЭКРАН ЗВОНКА -->
+<div class="call-screen" id="callScreen">
+    <div class="call-header">
+        <button onclick="endCall()" style="position:absolute;top:12px;right:16px;color:#fff;font-size:20px;z-index:10">✕</button>
+        <div class="call-avatar" id="callAvatar">?</div>
+        <div class="call-name" id="callName">Собеседник</div>
+        <div class="call-status" id="callStatus">Соединение...</div>
+    </div>
+    <div class="call-messages" id="callMessages"></div>
+    <div class="call-input-area">
+        <input type="text" class="call-input" id="callInput" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendCallMsg()">
+        <button class="call-send-btn" onclick="sendCallMsg()">&gt;</button>
+    </div>
+    <button class="call-end-btn" onclick="endCall()">📞</button>
+</div>
+
+<!-- МОДАЛКА СОХРАНЕНИЯ -->
+<div class="save-modal" id="saveModal">
+    <div class="save-content">
+        <h3>Сохранить переписку?</h3>
+        <p>Сообщения звонка можно сохранить в чат или удалить.</p>
+        <button class="auth-btn" onclick="saveCall(currentChatId)" style="margin-bottom:8px">Сохранить</button>
+        <button class="auth-btn-secondary" onclick="discardCall()">Удалить</button>
+    </div>
+</div>
     <script>
     const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
@@ -340,5 +375,10 @@
     async function startChatWith(uid,name){document.getElementById('searchResults').classList.remove('show');document.getElementById('searchInput').value='';let{data:cid}=await db.rpc('create_safe_chat',{user1:user.id,user2:uid,chat_name:(user.display_name||user.username)+' & '+name});loadChats();openChat(cid,(user.display_name||user.username)+' & '+name)}
     document.addEventListener('DOMContentLoaded',()=>{let ta=document.getElementById('msgInput');if(ta)ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'})});
     </script>
+    <!-- В <head> -->
+<link rel="stylesheet" href="css/call.css">
+
+<!-- Перед </body> -->
+<script src="js/call.js"></script>
 </body>
 </html>
