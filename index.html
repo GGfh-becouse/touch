@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/call.css">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{
@@ -177,7 +178,7 @@
 <body>
     <div class="splash-screen" id="splashScreen">
         <img src="you_know.png" style="width:72px;height:72px;border-radius:18px;margin-bottom:16px" alt="Touch">
-        <div style="font-family:var(--head);font-size:24px;font-weight:700">TOUCH powered by Zmee</div>
+        <div style="font-family:var(--head);font-size:24px;font-weight:700">TOUCH</div>
         <div style="color:var(--text3);font-size:13px;margin-top:4px">powered by Zmee</div>
         <div style="width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-top:24px"></div>
     </div>
@@ -221,42 +222,43 @@
         <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeCreateMenu()">&times;</button><div style="color:#fff;font-family:var(--head);font-size:22px">Создать</div><div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:6px">Выберите тип</div></div>
         <div class="fs-body"><div class="setting-row" onclick="createDirectChat()"><span class="lbl">Личный чат</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createGroupChat()"><span class="lbl">Группа</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createChannel()"><span class="lbl">Канал</span><span class="val">&rarr;</span></div></div>
     </div>
-<!-- ЭКРАН ВХОДЯЩЕГО ЗВОНКА -->
-<div class="incoming-call-screen" id="incomingScreen">
-    <div class="incoming-avatar" id="incomingAvatar">?</div>
-    <div class="incoming-name" id="incomingName">Входящий звонок</div>
-    <div style="color:rgba(255,255,255,0.7);font-size:13px">Touch Call</div>
-    <div class="incoming-buttons">
-        <button class="btn-reject" onclick="rejectCall()">✕</button>
-        <button class="btn-accept" onclick="acceptCall()">✓</button>
-    </div>
-</div>
 
-<!-- ЭКРАН ЗВОНКА -->
-<div class="call-screen" id="callScreen">
-    <div class="call-header">
-        <button onclick="endCall()" style="position:absolute;top:12px;right:16px;color:#fff;font-size:20px;z-index:10">✕</button>
-        <div class="call-avatar" id="callAvatar">?</div>
-        <div class="call-name" id="callName">Собеседник</div>
-        <div class="call-status" id="callStatus">Соединение...</div>
+    <!-- ЗВОНКИ -->
+    <div class="incoming-call-screen" id="incomingScreen">
+        <div class="incoming-avatar" id="incomingAvatar">?</div>
+        <div class="incoming-name" id="incomingName">Входящий звонок</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:13px">Touch Call</div>
+        <div class="incoming-buttons">
+            <button class="btn-reject" onclick="rejectCall()">✕</button>
+            <button class="btn-accept" onclick="acceptCall()">✓</button>
+        </div>
     </div>
-    <div class="call-messages" id="callMessages"></div>
-    <div class="call-input-area">
-        <input type="text" class="call-input" id="callInput" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendCallMsg()">
-        <button class="call-send-btn" onclick="sendCallMsg()">&gt;</button>
-    </div>
-    <button class="call-end-btn" onclick="endCall()">📞</button>
-</div>
 
-<!-- МОДАЛКА СОХРАНЕНИЯ -->
-<div class="save-modal" id="saveModal">
-    <div class="save-content">
-        <h3>Сохранить переписку?</h3>
-        <p>Сообщения звонка можно сохранить в чат или удалить.</p>
-        <button class="auth-btn" onclick="saveCall(currentChatId)" style="margin-bottom:8px">Сохранить</button>
-        <button class="auth-btn-secondary" onclick="discardCall()">Удалить</button>
+    <div class="call-screen" id="callScreen">
+        <div class="call-header">
+            <button onclick="endCall()" style="position:absolute;top:12px;right:16px;color:#fff;font-size:20px;z-index:10">✕</button>
+            <div class="call-avatar" id="callAvatar">?</div>
+            <div class="call-name" id="callName">Собеседник</div>
+            <div class="call-status" id="callStatus">Соединение...</div>
+        </div>
+        <div class="call-messages" id="callMessages"></div>
+        <div class="call-input-area">
+            <input type="text" class="call-input" id="callInput" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendCallMsg()">
+            <button class="call-send-btn" onclick="sendCallMsg()">&gt;</button>
+        </div>
+        <button class="call-end-btn" onclick="endCall()">📞</button>
     </div>
-</div>
+
+    <div class="save-modal" id="saveModal">
+        <div class="save-content">
+            <h3>Сохранить переписку?</h3>
+            <p>Сообщения звонка можно сохранить в чат или удалить.</p>
+            <button class="auth-btn" onclick="saveCall(chatId)" style="margin-bottom:8px">Сохранить</button>
+            <button class="auth-btn-secondary" onclick="discardCall()">Удалить</button>
+        </div>
+    </div>
+
+    <script src="js/call.js"></script>
     <script>
     const SUPABASE_URL = 'https://efsacictumespelzheaj.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_10rKA_3PcyCW7l-HwSjz4w_w8NaA7ls';
@@ -266,7 +268,7 @@
     function setUserContext(uid){db.headers={'X-User-ID':uid}}
     function hideSplash(){let s=document.getElementById('splashScreen');if(s&&!s.classList.contains('hide')){s.classList.add('hide');setTimeout(()=>{if(s.parentNode)s.remove()},400)}}
     const saved=localStorage.getItem('touchUser');
-    if(saved){try{user=JSON.parse(saved);if(user&&user.id){setUserContext(user.id);hideAuth();refreshUI();loadChats();startChatsPolling();setTimeout(hideSplash,300)}}catch(e){localStorage.removeItem('touchUser');showAuth();setTimeout(hideSplash,1500)}}
+    if(saved){try{user=JSON.parse(saved);if(user&&user.id){setUserContext(user.id);hideAuth();refreshUI();loadChats();startChatsPolling();setTimeout(hideSplash,300);initCalls(user.id)}}catch(e){localStorage.removeItem('touchUser');showAuth();setTimeout(hideSplash,1500)}}
     else{showAuth();setTimeout(hideSplash,1500)}
     if(localStorage.getItem('touchTheme')==='dark')document.body.classList.add('dark');
 
@@ -318,7 +320,7 @@
                 if(error)throw error;
                 await db.rpc('set_password',{uid:nu.id,pass:password});user=nu;setUserContext(user.id);
             }
-            localStorage.setItem('touchUser',JSON.stringify(user));hideAuth();hideSplash();refreshUI();loadChats();startChatsPolling();
+            localStorage.setItem('touchUser',JSON.stringify(user));hideAuth();hideSplash();refreshUI();loadChats();startChatsPolling();initCalls(user.id);
         }catch(e){err.textContent=e.message;err.style.display='block'}
     }
     document.getElementById('authSubmitBtn').addEventListener('click',doAuth);
@@ -375,10 +377,5 @@
     async function startChatWith(uid,name){document.getElementById('searchResults').classList.remove('show');document.getElementById('searchInput').value='';let{data:cid}=await db.rpc('create_safe_chat',{user1:user.id,user2:uid,chat_name:(user.display_name||user.username)+' & '+name});loadChats();openChat(cid,(user.display_name||user.username)+' & '+name)}
     document.addEventListener('DOMContentLoaded',()=>{let ta=document.getElementById('msgInput');if(ta)ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'})});
     </script>
-    <!-- В <head> -->
-<link rel="stylesheet" href="css/call.css">
-
-<!-- Перед </body> -->
-<script src="js/call.js"></script>
 </body>
 </html>
