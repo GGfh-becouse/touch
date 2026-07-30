@@ -1,132 +1,117 @@
-// ============ CALL MANAGER ============
+// ============ CALL SYSTEM ============
+let callMgr = null, callMsgs = [], callChannel = null, msgChannel = null, currentCallId = null, callChatId = null;
+
+function initCalls(uid) {
+    callMgr = new CallManager(uid);
+    callMgr.listenIncoming(c => showIncomingCall(c));
+}
 
 class CallManager {
-    constructor(db, userId) {
-        this.db = db;
-        this.userId = userId;
-        this.currentCall = null;
-        this.callChannel = null;
-        this.msgChannel = null;
-        this.messages = [];
-    }
-
+    constructor(uid) { this.uid = uid }
+    
     async startCall(receiverId) {
-        const { data: call, error } = await this.db
-            .from('calls')
-            .insert({ caller_id: this.userId, receiver_id: receiverId, status: 'pending' })
+        const { data: c } = await db.from('calls')
+            .insert({ caller_id: this.uid, receiver_id: receiverId, status: 'pending' })
             .select('*').single();
-
-        if (error) { console.error(error); return null; }
-
-        this.currentCall = call;
-        this.listenCall(call.id);
-        return call;
+        if (c) { currentCallId = c.id; this.listenCall(c.id); return c }
+        return null;
     }
-
-    async acceptCall(callId) {
-        await this.db.from('calls').update({ status: 'active' }).eq('id', callId);
-        this.currentCall = { id: callId, status: 'active' };
-        this.listenMessages(callId);
-        return true;
+    
+    async acceptCall(cid) {
+        await db.from('calls').update({ status: 'active' }).eq('id', cid);
+        currentCallId = cid;
+        this.listenMessages(cid);
     }
-
-    async rejectCall(callId) {
-        await this.db.from('calls').update({ status: 'rejected', ended_at: new Date() }).eq('id', callId);
-        this.destroy();
+    
+    async rejectCall(cid) {
+        await db.from('calls').update({ status: 'rejected', ended_at: new Date() }).eq('id', cid);
     }
-
+    
     async endCall() {
-        if (!this.currentCall) return [];
-        const msgs = [...this.messages];
-        await this.db.from('calls').update({ status: 'ended', ended_at: new Date() }).eq('id', this.currentCall.id);
-        this.messages = [];
-        this.destroy();
-        return msgs;
+        const ms = [...callMsgs];
+        callMsgs = [];
+        if (currentCallId) {
+            await db.from('calls').update({ status: 'ended', ended_at: new Date() }).eq('id', currentCallId);
+            this.destroy();
+        }
+        return ms;
     }
-
-    async sendMessage(content) {
-        if (!this.currentCall) return;
-        await this.db.from('call_messages').insert({
-            call_id: this.currentCall.id,
-            sender_id: this.userId,
-            content: content
-        });
+    
+    async sendMsg(txt) {
+        if (!currentCallId) return;
+        await db.from('call_messages').insert({ call_id: currentCallId, sender_id: this.uid, content: txt });
     }
-
-    async saveToChat(chatId, messages) {
-        if (!messages.length) return;
-        const rows = messages.map(m => ({
-            chat_id: chatId,
+    
+    async saveToChat(cid, ms) {
+        if (!ms.length) return;
+        await db.from('messages').insert(ms.map(m => ({
+            chat_id: cid,
             sender_id: m.sender_id,
             content: '📞 Звонок: ' + m.content,
             created_at: m.created_at
-        }));
-        await this.db.from('messages').insert(rows);
+        })));
     }
-
-    listenCall(callId) {
-        this.callChannel = this.db
-            .channel('call:' + callId)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls', filter: 'id=eq.' + callId }, payload => {
-                const c = payload.new;
-                this.currentCall = c;
-                if (c.status === 'active') { onCallActive(c); this.listenMessages(callId); }
+    
+    listenCall(cid) {
+        callChannel = db.channel('call:' + cid)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls', filter: 'id=eq.' + cid }, p => {
+                const c = p.new;
+                if (c.status === 'active') { onCallActive(); this.listenMessages(cid); }
                 else if (c.status === 'rejected') { onCallRejected(); this.destroy(); }
                 else if (c.status === 'ended') onCallEnded();
             }).subscribe();
     }
-
-    listenMessages(callId) {
-        this.msgChannel = this.db
-            .channel('callmsgs:' + callId)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_messages', filter: 'call_id=eq.' + callId }, payload => {
-                const m = payload.new;
-                if (m.sender_id !== this.userId) {
-                    this.messages.push(m);
-                    showCallMessage(m, false);
-                    setTimeout(() => hideCallMessage(m.id), 3000);
+    
+    listenMessages(cid) {
+        msgChannel = db.channel('callmsgs:' + cid)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_messages', filter: 'call_id=eq.' + cid }, p => {
+                const m = p.new;
+                if (m.sender_id !== this.uid) {
+                    callMsgs.push(m);
+                    showCallMsg(m, false);
+                    setTimeout(() => hideCallMsg(m.id), 3000);
                 }
             }).subscribe();
     }
-
+    
     listenIncoming(cb) {
-        return this.db
-            .channel('incoming:' + this.userId)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calls', filter: 'receiver_id=eq.' + this.userId }, payload => {
-                if (payload.new.status === 'pending') cb(payload.new);
+        return db.channel('incoming:' + this.uid)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calls', filter: 'receiver_id=eq.' + this.uid }, p => {
+                if (p.new.status === 'pending') cb(p.new);
             }).subscribe();
     }
-
+    
     destroy() {
-        if (this.callChannel) { this.db.removeChannel(this.callChannel); this.callChannel = null; }
-        if (this.msgChannel) { this.db.removeChannel(this.msgChannel); this.msgChannel = null; }
-        this.currentCall = null;
+        if (callChannel) { db.removeChannel(callChannel); callChannel = null; }
+        if (msgChannel) { db.removeChannel(msgChannel); msgChannel = null; }
+        currentCallId = null;
     }
 }
 
-// ============ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ============
-let callMgr = null;
-
-// ============ ИНИЦИАЛИЗАЦИЯ ============
-function initCalls(userId) {
-    callMgr = new CallManager(db, userId);
-    callMgr.listenIncoming(call => showIncomingCall(call));
-}
-
-// ============ ДЕЙСТВИЯ ============
-function startCall(rid, rname) {
-    callMgr.startCall(rid).then(call => {
-        if (call) { openCallScreen(rname); setStatus('Ожидание...'); }
-    });
+// ============ ДЕЙСТВИЯ ЗВОНКА ============
+function startCall() {
+    if (!chatId) return;
+    // Находим собеседника в текущем чате
+    db.from('chat_members').select('user_id').eq('chat_id', chatId).neq('user_id', user.id).single()
+        .then(({ data }) => {
+            if (data) {
+                callChatId = chatId; // Сохраняем чат для сохранения переписки
+                callMgr.startCall(data.user_id).then(c => {
+                    if (c) {
+                        openCallScreen(document.getElementById('chatTitle').textContent);
+                        setCallStatus('Ожидание...');
+                    }
+                });
+            } else alert('Собеседник не найден');
+        });
 }
 
 function acceptCall() {
     const id = document.getElementById('incomingScreen').dataset.callId;
-    callMgr.acceptCall(id).then(() => {
-        hideIncoming();
-        openCallScreen('Собеседник');
-        setStatus('Активен');
-    });
+    callMgr.acceptCall(id);
+    hideIncoming();
+    openCallScreen('Собеседник');
+    setCallStatus('Активен');
 }
 
 function rejectCall() {
@@ -138,7 +123,7 @@ function rejectCall() {
 function endCall() {
     callMgr.endCall().then(msgs => {
         closeCallScreen();
-        if (msgs.length) showSaveModal(msgs);
+        if (msgs.length) showSaveModal();
     });
 }
 
@@ -147,22 +132,22 @@ function sendCallMsg() {
     const txt = inp.value.trim();
     if (!txt) return;
     inp.value = '';
-    const msg = { id: 't' + Date.now(), sender_id: callMgr.userId, content: txt, created_at: new Date().toISOString() };
-    showCallMessage(msg, true);
-    callMgr.sendMessage(txt);
-    setTimeout(() => hideCallMessage(msg.id), 3000);
+    const msg = { id: 't' + Date.now(), sender_id: user.id, content: txt, created_at: new Date().toISOString() };
+    showCallMsg(msg, true);
+    callMgr.sendMsg(txt);
+    setTimeout(() => hideCallMsg(msg.id), 3000);
 }
 
-function saveCall(chatId) {
-    callMgr.saveToChat(chatId, callMgr.messages).then(() => {
+function saveCall() {
+    callMgr.saveToChat(callChatId || chatId, callMsgs).then(() => {
         hideSaveModal();
         alert('Сохранено в чат!');
     });
 }
 
-function discardCall() { hideSaveModal(); }
+function discardCall() { hideSaveModal(); callMsgs = []; }
 
-// ============ UI ============
+// ============ UI ЗВОНКА ============
 function showIncomingCall(call) {
     const s = document.getElementById('incomingScreen');
     s.dataset.callId = call.id;
@@ -185,27 +170,27 @@ function openCallScreen(name) {
 }
 
 function closeCallScreen() { document.getElementById('callScreen').classList.remove('show'); }
-function setStatus(s) { document.getElementById('callStatus').textContent = s; }
+function setCallStatus(s) { document.getElementById('callStatus').textContent = s; }
 
-function showCallMessage(msg, isOut) {
+function showCallMsg(msg, isOut) {
     const c = document.getElementById('callMessages');
     const d = document.createElement('div');
-    d.className = 'call-message ' + (isOut ? 'outgoing' : 'incoming');
+    d.className = 'call-msg ' + (isOut ? 'outgoing' : 'incoming');
     d.id = 'cm-' + msg.id;
-    d.innerHTML = '<div>' + msg.content + '</div><div class="call-msg-time">' + new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + '</div>';
+    d.innerHTML = '<div>' + msg.content + '</div><div style="font-size:10px;opacity:0.6;margin-top:4px">' + 
+        new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + '</div>';
     c.appendChild(d);
     c.scrollTop = c.scrollHeight;
 }
 
-function hideCallMessage(id) {
+function hideCallMsg(id) {
     const el = document.getElementById('cm-' + id);
-    if (el) { el.style.transition = '0.5s'; el.style.opacity = '0'; el.style.transform = 'scale(0.8)'; setTimeout(() => el.remove(), 500); }
+    if (el) { el.style.opacity = '0'; el.style.transform = 'scale(0.8)'; el.style.transition = '0.5s'; setTimeout(() => el.remove(), 500); }
 }
 
-function showSaveModal(msgs) { document.getElementById('saveModal').classList.add('show'); }
+function showSaveModal() { document.getElementById('saveModal').classList.add('show'); }
 function hideSaveModal() { document.getElementById('saveModal').classList.remove('show'); }
 
-// Колбэки для CallManager
-function onCallActive(c) { setStatus('Активен'); hideIncoming(); }
+function onCallActive() { setCallStatus('Активен'); hideIncoming(); }
 function onCallRejected() { alert('Звонок отклонен'); closeCallScreen(); }
 function onCallEnded() { closeCallScreen(); }
