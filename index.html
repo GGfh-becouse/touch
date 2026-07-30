@@ -15,7 +15,7 @@
             --border:#e0e0e0;--border2:#d0d0d0;--text:#1a1a1a;--text2:#666;--text3:#999;
             --accent:#7b1f2b;--accent2:#9e2d3a;--accent3:#5a1520;
             --font:'Ubuntu',sans-serif;--head:'Space Grotesk',sans-serif;
-            --radius:12px;--radius-lg:16px;--transition:200ms cubic-bezier(0.25,0.8,0.25,1.2);
+            --radius:12px;--radius-lg:16px;--transition:200ms ease;
         }
         body.dark{
             --bg:#141414;--bg2:#1a1a1a;--card:#202020;--card2:#252525;
@@ -30,7 +30,8 @@
         ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
         .header{height:60px;background:var(--bg2);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:100}
-        .back-btn{display:none;width:34px;height:34px;border-radius:var(--radius);align-items:center;justify-content:center;color:var(--text2);font-size:16px}
+        .header-left{display:flex;align-items:center;gap:10px}
+        .back-btn{display:none;width:34px;height:34px;border-radius:var(--radius);align-items:center;justify-content:center;color:var(--text2);font-size:18px}
         .back-btn:hover{background:var(--card2);color:var(--text)}
         .logo-text{font-family:var(--head);font-size:18px;font-weight:600}
         .header-right{display:flex;gap:4px}
@@ -38,8 +39,8 @@
         .hbtn:hover{background:var(--card2);color:var(--text)}
         .ava-sm{width:32px;height:32px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:#fff}
 
-        .app{display:flex;height:calc(100vh - 60px)}
-        .chats-screen{width:380px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+        .app{display:flex;height:calc(100vh - 60px);position:relative;overflow:hidden}
+        .chats-screen{width:380px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:1}
         .search-wrap{padding:12px;position:relative}
         .search-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;display:flex;align-items:center;gap:8px}
         .search-box input{flex:1;font-size:14px;background:transparent}
@@ -55,7 +56,7 @@
         .chat-name{font-weight:500;font-size:14px}
         .chat-last{font-size:12px;color:var(--text2)}
 
-        .chat-screen{flex:1;display:flex;flex-direction:column;background:var(--bg)}
+        .chat-screen{flex:1;display:flex;flex-direction:column;background:var(--bg);z-index:2}
         .chat-header{height:60px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--bg2)}
         .chat-header-info{display:flex;align-items:center;gap:10px}
         .ava-lg{width:40px;height:40px;border-radius:50%;background:var(--card2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;color:var(--text2)}
@@ -85,6 +86,7 @@
 
         .fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:150;box-shadow:0 4px 16px rgba(123,31,43,0.3)}
         .fab:active{transform:scale(0.9)}
+        .fab.hidden{display:none}
 
         .fullscreen{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:300;flex-direction:column;animation:fadeIn 0.25s ease}
         .fullscreen.show{display:flex}
@@ -115,9 +117,7 @@
         .auth-switch{text-align:center;color:var(--text2);font-size:13px;margin-top:16px}
         .auth-switch span{color:var(--accent);cursor:pointer;font-weight:500}
         .auth-error{color:var(--accent);font-size:12px;text-align:center;margin-bottom:8px;display:none}
-        .auth-subtitle{color:rgba(255,255,255,.7);font-size:13px;margin-top:4px}
 
-        /* Стили звонка */
         .call-screen{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:500;flex-direction:column}
         .call-screen.show{display:flex}
         .call-header-call{height:130px;background:linear-gradient(135deg,var(--accent3),var(--accent));display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
@@ -148,10 +148,11 @@
 
         @media(min-width:769px){.fab{display:none}}
         @media(max-width:768px){
-            .header{height:48px;padding:0 10px}.back-btn{display:flex;width:30px;height:30px;font-size:14px}
-            .app{height:calc(100vh - 48px);display:block}
-            .chats-screen{max-width:100%;width:100%;height:100%;position:absolute;top:0;left:0;z-index:1}
-            .chat-screen{width:100%;height:100%;position:absolute;top:0;left:0;z-index:2;transform:translateX(100%);transition:transform .3s}
+            .header{height:48px;padding:0 10px}
+            .back-btn{display:flex;width:30px;height:30px;font-size:14px}
+            .app{height:calc(100vh - 48px)}
+            .chats-screen{max-width:100%;width:100%;position:absolute;top:0;left:0}
+            .chat-screen{width:100%;position:absolute;top:0;left:0;transform:translateX(100%);transition:transform .3s}
             .chat-screen.active{transform:translateX(0)}
             .chats-screen.hidden{transform:translateX(-30%);opacity:.3;pointer-events:none}
             .msg-bubble{max-width:78%}
@@ -169,7 +170,7 @@
     <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
     <header class="header">
-        <div class="header-left"><button class="back-btn" id="backBtn" onclick="goBack()">&larr;</button><img src="you_know.png" style="width:26px;height:26px;border-radius:6px"><span class="logo-text">Touch</span></div>
+        <div class="header-left"><button class="back-btn" id="backBtn" onclick="goBack()">←</button><img src="you_know.png" style="width:26px;height:26px;border-radius:6px"><span class="logo-text">Touch</span></div>
         <div class="header-right"><button class="hbtn" onclick="openProfile()"><div class="ava-sm" id="headAva">?</div></button></div>
     </header>
 
@@ -192,33 +193,28 @@
         </div>
     </div>
 
-    <button class="fab" onclick="showCreateMenu()">+</button>
+    <button class="fab" id="fabBtn" onclick="showCreateMenu()">+</button>
 
-    <!-- АВТОРИЗАЦИЯ -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-header"><div style="width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:12px"><img src="you_know.png" style="width:48px;height:48px;border-radius:12px"></div><div style="color:#fff;font-family:var(--head);font-size:22px;font-weight:700">Touch</div><div class="auth-subtitle" id="authSubtitle">Войдите в аккаунт</div></div>
         <div class="auth-body"><div class="auth-error" id="authError"></div><input type="email" class="auth-input" id="authEmail" placeholder="Email"><input type="text" class="auth-input" id="authUsername" placeholder="Имя"><input type="password" class="auth-input" id="authPassword" placeholder="Пароль"><button class="auth-btn" id="authSubmitBtn">Войти</button><p class="auth-switch"><span id="authToggleBtn">Регистрация</span></p></div>
     </div>
 
-    <!-- ПРОФИЛЬ -->
     <div class="fullscreen" id="profileScreen">
         <div class="fs-header"><button class="fs-close" onclick="closeProfile()">&times;</button><div class="fs-avatar" id="profBigAva">U</div><div style="color:#fff;font-family:var(--head);font-size:20px;margin-top:10px" id="profBigName">Пользователь</div><div style="color:rgba(255,255,255,.7);font-size:13px" id="profBigTid">@touch_user</div></div>
         <div class="fs-body"><div class="setting-row" onclick="updateDisplayName()"><span class="lbl">Имя</span><span class="val" id="profDisplayName">-</span></div><div class="setting-row"><span class="lbl">Email</span><span class="val" id="profEmail">-</span></div><div class="setting-row" onclick="setPassword()"><span class="lbl">Пароль</span><span class="val" id="passwordStatus">Не установлен</span></div><div class="setting-row" onclick="copyTid()"><span class="lbl">TID</span><span class="val" id="profTid">-</span></div><div class="setting-row"><span class="lbl">Регистрация</span><span class="val" id="profDate">-</span></div><div class="setting-row" onclick="toggleTheme()"><span class="lbl">Тёмная тема</span><span class="val"><div class="toggle-switch" id="themeToggle"></div></span></div><button class="auth-btn-secondary" onclick="openLogoutScreen()" style="margin-top:20px">Выйти</button></div>
     </div>
 
-    <!-- ВЫХОД -->
     <div class="fullscreen" id="logoutScreen">
         <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeLogoutScreen()">&times;</button><div style="color:#fff;font-family:var(--head);font-size:22px">Выход</div></div>
         <div class="fs-body" style="text-align:center;padding-top:30px"><p style="color:var(--text2);margin-bottom:20px">Все данные будут очищены.</p><button class="auth-btn" onclick="confirmLogout()">Выйти</button><button class="auth-btn-secondary" onclick="closeLogoutScreen()" style="margin-top:8px">Отмена</button></div>
     </div>
 
-    <!-- МЕНЮ СОЗДАНИЯ -->
     <div class="fullscreen" id="createMenu">
         <div class="fs-header" style="height:160px"><button class="fs-close" onclick="closeCreateMenu()">&times;</button><div style="color:#fff;font-family:var(--head);font-size:22px">Создать</div></div>
         <div class="fs-body"><div class="setting-row" onclick="createDirectChat()"><span class="lbl">Личный чат</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createGroupChat()"><span class="lbl">Группа</span><span class="val">&rarr;</span></div><div class="setting-row" onclick="createChannel()"><span class="lbl">Канал</span><span class="val">&rarr;</span></div></div>
     </div>
 
-    <!-- ЗВОНКИ -->
     <div class="incoming-screen" id="incomingScreen">
         <div class="incoming-ava" id="incomingAvatar">?</div>
         <div class="incoming-name" id="incomingName">Входящий звонок</div>
@@ -242,48 +238,40 @@
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let user=null,chatId=null,isLogin=true,pollTimer=null,chatsPollTimer=null,lastMsgCount=0,lastMessageDate=null;
 
-    // ============ CALL SYSTEM ============
-    let callMgr=null,callMsgs=[],callChannel=null,msgChannel=null,currentCallId=null;
-
-    function initCalls(uid){callMgr=new CallManager(uid);callMgr.listenIncoming(c=>showIncomingCall(c))}
+    // ============ CALL SYSTEM (POLLING) ============
+    let callMgr=null,callMsgs=[],currentCallId=null,callChatId=null,callPollTimer=null,callMsgPollTimer=null;
+    function initCalls(uid){callMgr=new CallManager(uid);setInterval(()=>callMgr.checkIncoming(),2000)}
     class CallManager{
-        constructor(uid){this.uid=uid}
-        async startCall(rid){let{data:c}=await db.from('calls').insert({caller_id:this.uid,receiver_id:rid,status:'pending'}).select('*').single();if(c){currentCallId=c.id;this.listenCall(c.id);return c}return null}
-        async acceptCall(cid){await db.from('calls').update({status:'active'}).eq('id',cid);currentCallId=cid;this.listenMessages(cid)}
-        async rejectCall(cid){await db.from('calls').update({status:'rejected',ended_at:new Date()}).eq('id',cid)}
-        async endCall(){let ms=[...callMsgs];callMsgs=[];if(currentCallId){await db.from('calls').update({status:'ended',ended_at:new Date()}).eq('id',currentCallId);this.destroy()}return ms}
+        constructor(uid){this.uid=uid;this.lastMsgId=null}
+        async startCall(rid){let{data:c}=await db.from('calls').insert({caller_id:this.uid,receiver_id:rid,status:'pending'}).select('*').single();if(c){currentCallId=c.id;this.pollCallStatus(c.id);return c}return null}
+        async acceptCall(cid){await db.from('calls').update({status:'active'}).eq('id',cid);currentCallId=cid;this.pollMessages(cid)}
+        async rejectCall(cid){await db.from('calls').update({status:'rejected',ended_at:new Date()}).eq('id',cid);currentCallId=null}
+        async endCall(){let ms=[...callMsgs];callMsgs=[];if(currentCallId){await db.from('calls').update({status:'ended',ended_at:new Date()}).eq('id',currentCallId);this.stopPolling()}return ms}
         async sendMsg(txt){if(!currentCallId)return;await db.from('call_messages').insert({call_id:currentCallId,sender_id:this.uid,content:txt})}
         async saveToChat(cid,ms){if(!ms.length)return;await db.from('messages').insert(ms.map(m=>({chat_id:cid,sender_id:m.sender_id,content:'📞 Звонок: '+m.content,created_at:m.created_at})))}
-        listenCall(cid){callChannel=db.channel('call:'+cid).on('postgres_changes',{event:'UPDATE',schema:'public',table:'calls',filter:'id=eq.'+cid},p=>{let c=p.new;if(c.status==='active'){onCallActive();this.listenMessages(cid)}else if(c.status==='rejected'){onCallRejected();this.destroy()}else if(c.status==='ended')onCallEnded()}).subscribe()}
-        listenMessages(cid){msgChannel=db.channel('callmsgs:'+cid).on('postgres_changes',{event:'INSERT',schema:'public',table:'call_messages',filter:'call_id=eq.'+cid},p=>{let m=p.new;if(m.sender_id!==this.uid){callMsgs.push(m);showCallMsg(m,false);setTimeout(()=>hideCallMsg(m.id),3000)}}).subscribe()}
-        listenIncoming(cb){return db.channel('incoming:'+this.uid).on('postgres_changes',{event:'INSERT',schema:'public',table:'calls',filter:'receiver_id=eq.'+this.uid},p=>{if(p.new.status==='pending')cb(p.new)}).subscribe()}
-        destroy(){if(callChannel){db.removeChannel(callChannel);callChannel=null}if(msgChannel){db.removeChannel(msgChannel);msgChannel=null}currentCallId=null}
+        pollCallStatus(cid){if(callPollTimer)clearInterval(callPollTimer);callPollTimer=setInterval(async()=>{let{data}=await db.from('calls').select('*').eq('id',cid).single();if(!data)return;if(data.status==='active'){clearInterval(callPollTimer);onCallActive();this.pollMessages(cid)}else if(data.status==='rejected'){clearInterval(callPollTimer);onCallRejected()}else if(data.status==='ended'){clearInterval(callPollTimer);onCallEnded()}},1000)}
+        async checkIncoming(){let{data}=await db.from('calls').select('*').eq('receiver_id',this.uid).eq('status','pending').order('created_at',{ascending:false}).limit(1).maybeSingle();if(data&&!document.getElementById('incomingScreen').classList.contains('show'))showIncomingCall(data)}
+        pollMessages(cid){this.lastMsgId=null;if(callMsgPollTimer)clearInterval(callMsgPollTimer);callMsgPollTimer=setInterval(async()=>{let q=db.from('call_messages').select('*').eq('call_id',cid).order('created_at',{ascending:true});if(this.lastMsgId)q=q.gt('id',this.lastMsgId);let{data}=await q;if(data&&data.length){data.forEach(m=>{if(m.sender_id!==this.uid){callMsgs.push(m);showCallMsg(m,false);setTimeout(()=>hideCallMsg(m.id),3000)}this.lastMsgId=m.id})}},1000)}
+        stopPolling(){if(callPollTimer){clearInterval(callPollTimer);callPollTimer=null}if(callMsgPollTimer){clearInterval(callMsgPollTimer);callMsgPollTimer=null}currentCallId=null}
     }
 
-    function startCall(){
-        if(!chatId)return;
-        db.from('chat_members').select('user_id').eq('chat_id',chatId).neq('user_id',user.id).single().then(({data})=>{
-            if(data){callMgr.startCall(data.user_id).then(c=>{if(c){openCallScreen(document.getElementById('chatTitle').textContent);setCallStatus('Ожидание...')}})}
-            else alert('Не найден собеседник')
-        })
-    }
+    function startCall(){if(!chatId)return;db.from('chat_members').select('user_id').eq('chat_id',chatId).neq('user_id',user.id).single().then(({data})=>{if(data){callChatId=chatId;callMgr.startCall(data.user_id).then(c=>{if(c){openCallScreen(document.getElementById('chatTitle').textContent);setCallStatus('Ожидание...')}})}else alert('Собеседник не найден')})}
     function acceptCall(){let id=document.getElementById('incomingScreen').dataset.callId;callMgr.acceptCall(id);hideIncoming();openCallScreen('Собеседник');setCallStatus('Активен')}
     function rejectCall(){let id=document.getElementById('incomingScreen').dataset.callId;callMgr.rejectCall(id);hideIncoming()}
-    function endCall(){callMgr.endCall().then(ms=>{closeCallScreen();if(ms.length)showSaveModal(ms)})}
-    function sendCallMsg(){let t=document.getElementById('callInput').value.trim();if(!t)return;document.getElementById('callInput').value='';let m={id:'t'+Date.now(),sender_id:user.id,content:t,created_at:new Date().toISOString()};showCallMsg(m,true);callMgr.sendMsg(t);setTimeout(()=>hideCallMsg(m.id),3000)}
-    function saveCall(){callMgr.saveToChat(chatId,callMsgs).then(()=>{hideSaveModal();alert('Сохранено!')})}
-    function discardCall(){hideSaveModal()}
-
-    function showIncomingCall(c){let s=document.getElementById('incomingScreen');s.dataset.callId=c.id;s.classList.add('show');db.from('users').select('display_name').eq('id',c.caller_id).single().then(({data})=>{if(data){document.getElementById('incomingAvatar').textContent=data.display_name[0];document.getElementById('incomingName').textContent=data.display_name}})}
+    function endCall(){callMgr.endCall().then(msgs=>{closeCallScreen();if(msgs.length)showSaveModal()})}
+    function sendCallMsg(){let inp=document.getElementById('callInput');let txt=inp.value.trim();if(!txt)return;inp.value='';let msg={id:'t'+Date.now(),sender_id:user.id,content:txt,created_at:new Date().toISOString()};showCallMsg(msg,true);callMgr.sendMsg(txt);setTimeout(()=>hideCallMsg(msg.id),3000)}
+    function saveCall(){callMgr.saveToChat(callChatId||chatId,callMsgs).then(()=>{hideSaveModal();alert('Сохранено!')})}
+    function discardCall(){hideSaveModal();callMsgs=[]}
+    function showIncomingCall(call){let s=document.getElementById('incomingScreen');s.dataset.callId=call.id;s.classList.add('show');db.from('users').select('display_name').eq('id',call.caller_id).single().then(({data})=>{if(data){document.getElementById('incomingAvatar').textContent=data.display_name[0];document.getElementById('incomingName').textContent=data.display_name}})}
     function hideIncoming(){document.getElementById('incomingScreen').classList.remove('show')}
-    function openCallScreen(n){document.getElementById('callAvatar').textContent=n[0];document.getElementById('callName').textContent=n;document.getElementById('callScreen').classList.add('show');document.getElementById('callMessages').innerHTML=''}
+    function openCallScreen(name){document.getElementById('callAvatar').textContent=name[0];document.getElementById('callName').textContent=name;document.getElementById('callScreen').classList.add('show');document.getElementById('callMessages').innerHTML=''}
     function closeCallScreen(){document.getElementById('callScreen').classList.remove('show')}
     function setCallStatus(s){document.getElementById('callStatus').textContent=s}
-    function showCallMsg(m,isOut){let c=document.getElementById('callMessages');let d=document.createElement('div');d.className='call-msg '+(isOut?'outgoing':'incoming');d.id='cm-'+m.id;d.innerHTML='<div>'+m.content+'</div><div style="font-size:10px;opacity:0.6;margin-top:4px">'+new Date(m.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</div>';c.appendChild(d);c.scrollTop=c.scrollHeight}
-    function hideCallMsg(id){let el=document.getElementById('cm-'+id);if(el){el.style.transition='0.5s';el.style.opacity='0';el.style.transform='scale(0.8)';setTimeout(()=>el.remove(),500)}}
+    function showCallMsg(msg,isOut){let c=document.getElementById('callMessages');let d=document.createElement('div');d.className='call-msg '+(isOut?'outgoing':'incoming');d.id='cm-'+msg.id;d.innerHTML='<div>'+msg.content+'</div><div style="font-size:10px;opacity:0.6;margin-top:4px">'+new Date(msg.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</div>';c.appendChild(d);c.scrollTop=c.scrollHeight}
+    function hideCallMsg(id){let el=document.getElementById('cm-'+id);if(el){el.style.opacity='0';el.style.transform='scale(0.8)';el.style.transition='0.5s';setTimeout(()=>el.remove(),500)}}
     function showSaveModal(){document.getElementById('saveModal').classList.add('show')}
     function hideSaveModal(){document.getElementById('saveModal').classList.remove('show')}
-    function onCallActive(){setCallStatus('Активен');hideIncoming()}
+    function onCallActive(){setCallStatus('Активен')}
     function onCallRejected(){alert('Звонок отклонен');closeCallScreen()}
     function onCallEnded(){closeCallScreen()}
 
@@ -341,34 +329,23 @@
     function startChatsPolling(){if(chatsPollTimer)clearInterval(chatsPollTimer);chatsPollTimer=setInterval(updateChats,2000)}
     async function updateChats(){if(!user)return;let{data}=await db.from('chat_members').select('chat_id,chats(id,name)').eq('user_id',user.id);if(!data)return;for(let item of data){let{data:count}=await db.rpc('get_unread_count',{chat_id:item.chats.id,user_id:user.id});let unread=count||0;let badge=document.getElementById('badge-'+item.chats.id);let last=document.getElementById('last-'+item.chats.id);let itemEl=document.querySelector('[data-chat-id="'+item.chats.id+'"]');if(badge){badge.textContent=unread;badge.style.display=unread>0?'inline-block':'none'}if(last){last.textContent=unread>0?unread+' новых':'';last.style.color=unread>0?'var(--accent)':'var(--text2)'}if(itemEl){if(unread>0)itemEl.classList.add('unread');else itemEl.classList.remove('unread')}}}
     async function loadChats(){if(!user)return;let{data}=await db.from('chat_members').select('chat_id,chats(id,name)').eq('user_id',user.id);let list=document.getElementById('chatsList');list.innerHTML='';if(data&&data.length){for(let item of data){let isActive=chatId===item.chats.id;let div=document.createElement('div');div.className='chat-item'+(isActive?' active':'');div.dataset.chatId=item.chats.id;div.addEventListener('click',()=>openChat(item.chats.id,item.chats.name));let ava=document.createElement('div');ava.className='ava';ava.textContent=(item.chats.name||'?')[0];let info=document.createElement('div');info.className='chat-info';let name=document.createElement('div');name.className='chat-name';name.textContent=item.chats.name;let last=document.createElement('div');last.className='chat-last';last.id='last-'+item.chats.id;info.appendChild(name);info.appendChild(last);let badge=document.createElement('div');badge.className='unread-badge';badge.id='badge-'+item.chats.id;badge.style.display='none';badge.textContent='0';div.appendChild(ava);div.appendChild(info);div.appendChild(badge);list.appendChild(div)}updateChats()}else{list.innerHTML='<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>'}hideSplash()}
-    async function openChat(id,name){if(pollTimer)clearInterval(pollTimer);chatId=id;lastMsgCount=0;lastMessageDate=null;document.getElementById('chatTitle').textContent=name;document.getElementById('chatAva').textContent=name[0];await loadMessages();markAsRead(id);updateChats();pollTimer=setInterval(checkNewMessages,1000);if(window.innerWidth<=768){document.getElementById('chatScreen').classList.add('active');document.getElementById('chatsScreen').classList.add('hidden');document.getElementById('backBtn').style.display='flex'}}
+    async function openChat(id,name){if(pollTimer)clearInterval(pollTimer);chatId=id;lastMsgCount=0;lastMessageDate=null;document.getElementById('chatTitle').textContent=name;document.getElementById('chatAva').textContent=name[0];await loadMessages();markAsRead(id);updateChats();pollTimer=setInterval(checkNewMessages,1000);if(window.innerWidth<=768){document.getElementById('chatScreen').classList.add('active');document.getElementById('chatsScreen').classList.add('hidden');document.getElementById('backBtn').style.display='flex';document.getElementById('fabBtn').classList.add('hidden')}}
     async function loadMessages(){if(!chatId)return;lastMessageDate=null;let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});let c=document.getElementById('messages');c.innerHTML='';if(msgs&&msgs.length){lastMsgCount=msgs.length;for(let m of msgs)appendMessage(m,c)}else{let center=document.createElement('div');center.className='messages-center';center.textContent='Нет сообщений';c.appendChild(center)}c.scrollTop=c.scrollHeight}
     async function checkNewMessages(){if(!chatId)return;let{data:msgs}=await db.from('messages').select('*').eq('chat_id',chatId).order('created_at',{ascending:true});let c=document.getElementById('messages');let placeholder=c.querySelector('.messages-center');if(placeholder)placeholder.remove();let temps=c.querySelectorAll('.msg[data-msg-id^="temp_"]');temps.forEach(el=>el.remove());if(!msgs||msgs.length<=lastMsgCount)return;for(let i=lastMsgCount;i<msgs.length;i++)appendMessage(msgs[i],c);lastMsgCount=msgs.length;c.scrollTop=c.scrollHeight;markAsRead(chatId)}
     function getDateString(d){let n=new Date(),t=new Date(n.getFullYear(),n.getMonth(),n.getDate()),y=new Date(t);y.setDate(y.getDate()-1);let dd=new Date(d.getFullYear(),d.getMonth(),d.getDate());if(dd.getTime()===t.getTime())return'Сегодня';if(dd.getTime()===y.getTime())return'Вчера';return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:d.getFullYear()!==n.getFullYear()?'numeric':undefined})}
-    function appendMessage(m,c,isTemp=false){
-        let isOut=m.sender_id===user.id,isDel=m.is_deleted;let d=new Date(m.created_at),time=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-        let ds=getDateString(d);if(ds!==lastMessageDate){lastMessageDate=ds;let sep=document.createElement('div');sep.className='msg-date-separator';let span=document.createElement('span');span.textContent=ds;sep.appendChild(span);c.appendChild(sep)}
-        let div=document.createElement('div');div.className='msg '+(isOut?'out':'in');div.dataset.msgId=m.id;div.dataset.senderId=m.sender_id;
-        let bubble=document.createElement('div');bubble.className='msg-bubble'+(isDel?' deleted':'');
-        let p=document.createElement('p');p.textContent=isDel?'[x] Удалено':m.content;
-        let timeSpan=document.createElement('div');timeSpan.className='time';timeSpan.textContent=time;
-        bubble.appendChild(p);bubble.appendChild(timeSpan);div.appendChild(bubble);
-        if(!isTemp&&!isDel&&m.sender_id===user.id){div.addEventListener('contextmenu',e=>{e.preventDefault();showMsgMenu(e.clientX,e.clientY,m.id)});let lp;div.addEventListener('touchstart',e=>{lp=setTimeout(()=>showMsgMenu(e.touches[0].clientX,e.touches[0].clientY,m.id),500)});div.addEventListener('touchend',()=>clearTimeout(lp));div.addEventListener('touchmove',()=>clearTimeout(lp))}
-        c.appendChild(div);
-    }
+    function appendMessage(m,c,isTemp=false){let isOut=m.sender_id===user.id,isDel=m.is_deleted;let d=new Date(m.created_at),time=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});let ds=getDateString(d);if(ds!==lastMessageDate){lastMessageDate=ds;let sep=document.createElement('div');sep.className='msg-date-separator';let span=document.createElement('span');span.textContent=ds;sep.appendChild(span);c.appendChild(sep)}let div=document.createElement('div');div.className='msg '+(isOut?'out':'in');div.dataset.msgId=m.id;div.dataset.senderId=m.sender_id;let bubble=document.createElement('div');bubble.className='msg-bubble'+(isDel?' deleted':'');let p=document.createElement('p');p.textContent=isDel?'[x] Удалено':m.content;let timeSpan=document.createElement('div');timeSpan.className='time';timeSpan.textContent=time;bubble.appendChild(p);bubble.appendChild(timeSpan);div.appendChild(bubble);if(!isTemp&&!isDel&&m.sender_id===user.id){div.addEventListener('contextmenu',e=>{e.preventDefault();showMsgMenu(e.clientX,e.clientY,m.id)});let lp;div.addEventListener('touchstart',e=>{lp=setTimeout(()=>showMsgMenu(e.touches[0].clientX,e.touches[0].clientY,m.id),500)});div.addEventListener('touchend',()=>clearTimeout(lp));div.addEventListener('touchmove',()=>clearTimeout(lp))}c.appendChild(div)}
     function showMsgMenu(x,y,id){closeMsgMenu();let m=document.createElement('div');m.id='msgMenu';m.style.cssText='position:fixed;left:'+x+'px;top:'+y+'px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:500;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.1)';let delBtn=document.createElement('button');delBtn.textContent='[x] Удалить';delBtn.style.cssText='width:100%;padding:8px 14px;font-size:13px;color:var(--accent)';delBtn.addEventListener('click',()=>deleteMessage(id));let cancelBtn=document.createElement('button');cancelBtn.textContent='[-] Отмена';cancelBtn.style.cssText='width:100%;padding:8px 14px;font-size:12px;color:var(--text2)';cancelBtn.addEventListener('click',closeMsgMenu);m.appendChild(delBtn);m.appendChild(cancelBtn);document.body.appendChild(m);setTimeout(()=>{document.addEventListener('click',closeMsgMenu);document.addEventListener('touchstart',closeMsgMenu)},100)}
     function closeMsgMenu(){let m=document.getElementById('msgMenu');if(m)m.remove();document.removeEventListener('click',closeMsgMenu);document.removeEventListener('touchstart',closeMsgMenu)}
     async function deleteMessage(id){closeMsgMenu();if(!confirm('Удалить?'))return;await db.from('messages').update({is_deleted:true,content:'[x] Удалено'}).eq('id',id);let el=document.querySelector('[data-msg-id="'+id+'"]');if(el){el.querySelector('.msg-bubble').classList.add('deleted');el.querySelector('p').textContent='[x] Удалено'}}
     async function markAsRead(cid){if(!user||!cid)return;let{data:ur}=await db.from('messages').select('id').eq('chat_id',cid).neq('sender_id',user.id);if(!ur||!ur.length)return;await db.from('message_reads').upsert(ur.map(m=>({message_id:m.id,user_id:user.id,read_at:new Date().toISOString()})),{onConflict:'message_id,user_id',ignoreDuplicates:true})}
     async function sendMsg(){if(!chatId)return;let ta=document.getElementById('msgInput');let t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';let tmp={id:'temp_'+Date.now(),content:t,sender_id:user.id,created_at:new Date().toISOString(),is_deleted:false,sending:true};let c=document.getElementById('messages');let placeholder=c.querySelector('.messages-center');if(placeholder)placeholder.remove();appendMessage(tmp,c,true);c.scrollTop=c.scrollHeight;let{error}=await db.from('messages').insert({chat_id:chatId,sender_id:user.id,content:t});if(error){let el=document.querySelector('[data-msg-id="'+tmp.id+'"]');if(el){el.querySelector('.msg-bubble').style.opacity='0.5';el.querySelector('p').textContent='[x] Ошибка'}}else{await checkNewMessages()}}
-
     async function createDirectChat(){closeCreateMenu();let q=prompt('Введите имя или TID:');if(!q)return;let{data:found}=await db.rpc('search_users',{query:q,current_user_id:user.id});if(!found||!found.length){alert('Не найден');return}let target=found[0];if(!confirm('Найден: '+target.display_name+'\nСоздать чат?'))return;let{data:cid}=await db.rpc('create_safe_chat',{user1:user.id,user2:target.id,chat_name:(user.display_name||user.username)+' & '+target.display_name});loadChats();openChat(cid,(user.display_name||user.username)+' & '+target.display_name)}
     async function createGroupChat(){closeCreateMenu();let name=prompt('Название группы:','Новая группа');if(!name)return;let membersStr=prompt('Username участников через запятую:','');if(!membersStr)return;let members=membersStr.split(',').map(m=>m.trim()).filter(m=>m);let{data:cid}=await db.rpc('create_safe_group',{creator_id:user.id,group_name:name,member_usernames:members});loadChats();openChat(cid,name)}
     async function createChannel(){closeCreateMenu();let name=prompt('Название канала:','Новый канал');if(!name)return;let{data:chat}=await db.from('chats').insert({name:name,is_channel:true,is_group:true}).select().single();await db.from('chat_members').insert({chat_id:chat.id,user_id:user.id});loadChats();openChat(chat.id,name);alert('Канал создан!')}
     async function updateDisplayName(){let nm=prompt('Новое имя:',user.display_name||user.username);if(!nm)return;await db.from('users').update({display_name:nm}).eq('id',user.id);user.display_name=nm;localStorage.setItem('touchUser',JSON.stringify(user));refreshUI()}
     async function renameChat(){if(!chatId)return;let nm=prompt('Название:',document.getElementById('chatTitle').textContent);if(!nm)return;await db.from('chats').update({name:nm}).eq('id',chatId);document.getElementById('chatTitle').textContent=nm;document.getElementById('chatAva').textContent=nm[0];loadChats()}
     async function deleteChat(){if(!chatId)return;if(!confirm('Удалить чат для себя?'))return;await db.from('chat_members').delete().eq('chat_id',chatId).eq('user_id',user.id);if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';document.getElementById('messages').innerHTML='<div class="messages-center">Чат удалён</div>';loadChats();if(window.innerWidth<=768)goBack()}
-    function goBack(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;lastMsgCount=0;document.getElementById('chatScreen').classList.remove('active');document.getElementById('chatsScreen').classList.remove('hidden');document.getElementById('backBtn').style.display='none';document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';let mc=document.getElementById('messages');mc.innerHTML='';let center=document.createElement('div');center.className='messages-center';center.textContent='Выберите чат';mc.appendChild(center)}
+    function goBack(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}chatId=null;lastMsgCount=0;document.getElementById('chatScreen').classList.remove('active');document.getElementById('chatsScreen').classList.remove('hidden');document.getElementById('backBtn').style.display='none';document.getElementById('fabBtn').classList.remove('hidden');document.getElementById('chatTitle').textContent='Выберите чат';document.getElementById('chatAva').textContent='?';let mc=document.getElementById('messages');mc.innerHTML='';let center=document.createElement('div');center.className='messages-center';center.textContent='Выберите чат';mc.appendChild(center)}
     function copyTid(){navigator.clipboard.writeText(document.getElementById('profTid').textContent);alert('Скопировано!')}
     function confirmLogout(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}if(chatsPollTimer){clearInterval(chatsPollTimer);chatsPollTimer=null}if(user)db.from('users').update({status:'offline',last_seen:new Date()}).eq('id',user.id);localStorage.removeItem('touchUser');user=null;chatId=null;closeProfile();closeLogoutScreen();goBack();document.getElementById('chatsList').innerHTML='<div style="text-align:center;color:var(--text2);padding:30px">Нет чатов</div>';document.getElementById('headAva').textContent='?';showAuth()}
 
